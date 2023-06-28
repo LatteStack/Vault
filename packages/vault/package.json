@@ -1,0 +1,13 @@
+{
+  "name": "@lattestack/vault",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "dependencies": {
+    "js-base64": "^3.7.5",
+    "zod": "^3.21.4"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.195",
+    "lodash": "^4.17.21"
+  }
+}
