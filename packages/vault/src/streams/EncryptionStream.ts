@@ -1,29 +1,61 @@
 import { Asymmetric } from "../Asymmetric"
 import { DEFAULT_CHUNK_SIZE } from "../constants"
-import { exportKey, objectToBuffer, uint32ToBuffer } from "../helpers"
+import { exportKey, generateHmacKeyFromBuffer, HMAC, objectToBuffer, uint32ToBuffer, withEquallySized } from "../helpers"
 import { Symmetric } from "../Symmetric"
 import { ExportedPackageHeader } from "../types"
-import { EquallySizedStream } from "./EquallySizedStream"
 
-export class EncryptionStream extends EquallySizedStream {
-  private symmetric!: Symmetric
+async function initialize(recipients: CryptoKey[]): Promise<{
+  header: Uint8Array
+  hamcKey: CryptoKey
+  symmetric: Symmetric
+}> {
+  const [
+    contentEncryptionKey,
+    { publicKey: contentPublicKey, privateKey: contentPrivateKey }
+  ] = await Promise.all([
+    Symmetric.generateEncryptionKey(),
+    Asymmetric.generateKeyPair('ECDH'),
+  ])
 
-  private contentEncryptionKey!: CryptoKey
+  const header = objectToBuffer<ExportedPackageHeader>({
+    CPK: await exportKey(contentPublicKey),
+    recipients: Object.fromEntries(
+      await Promise.all<[string, string]>(
+        recipients.map(async (recipientPublicKey) => {
+          const wrappingKey = await Asymmetric.deriveWrappingKey(
+            recipientPublicKey,
+            contentPrivateKey
+          )
 
-  private contentPublicKey!: CryptoKey
+          return Promise.all([
+            Asymmetric.calculateKeyThumbprint(recipientPublicKey),
+            Symmetric.wrapKey(contentEncryptionKey, wrappingKey)
+          ])
+        })
+      )
+    )
+  })
 
-  private contentPrivateKey!: CryptoKey
+  const hamcKey = await generateHmacKeyFromBuffer(header)
+  const symmetric = new Symmetric(contentEncryptionKey)
 
-  constructor(private readonly recipients: CryptoKey[]) {
-    let chunkIndex = 0
+  return {
+    header,
+    hamcKey,
+    symmetric,
+  }
+}
 
-    super({
+export class EncryptionStream {
+  static create(recipients: CryptoKey[]): TransformStream<Uint8Array, Uint8Array> {
+    let counter = 0
+    const initial = initialize(recipients)
+
+    return new TransformStream<Uint8Array, Uint8Array>(withEquallySized({
       chunkSize: DEFAULT_CHUNK_SIZE,
       start: async (controller) => {
         try {
-          await this.initialize()
-
-          const header = await this.buildHeader()
+          const { header } = await initial
           controller.enqueue(uint32ToBuffer(header.byteLength))
           controller.enqueue(header)
         } catch (error) {
@@ -32,57 +64,16 @@ export class EncryptionStream extends EquallySizedStream {
       },
       transform: async (chunk, controller) => {
         try {
-          const additionalData = uint32ToBuffer(chunkIndex)
-          const ciphertext = await this.symmetric.encrypt(chunk, additionalData)
+          const { symmetric, hamcKey } = await initial
+          const additionalData = await HMAC(hamcKey, uint32ToBuffer(counter))
+          const ciphertext = await symmetric.encrypt(chunk, additionalData)
 
           controller.enqueue(ciphertext)
-          chunkIndex += 1
+          counter += 1
         } catch (error) {
           controller.error(error)
         }
       },
-    })
-  }
-
-  private async initialize() {
-    const [
-      contentEncryptionKey,
-      { publicKey: contentPublicKey, privateKey: contentPrivateKey }
-    ] = await Promise.all([
-      Symmetric.generateEncryptionKey(),
-      Asymmetric.generateKeyPair('ECDH'),
-    ])
-
-    this.symmetric = new Symmetric(contentEncryptionKey)
-    this.contentEncryptionKey = contentEncryptionKey
-    this.contentPublicKey = contentPublicKey
-    this.contentPrivateKey = contentPrivateKey
-  }
-
-  private async buildHeader(): Promise<Uint8Array> {
-    const exportedHeader = objectToBuffer<ExportedPackageHeader>({
-      contentPublicKey: await exportKey(this.contentPublicKey),
-      recipientToWrappedCEK: await this.buildRecipients(),
-    })
-
-    return new Uint8Array(exportedHeader)
-  }
-
-  private async buildRecipients(): Promise<ExportedPackageHeader['recipientToWrappedCEK']> {
-    return Object.fromEntries(
-      await Promise.all<[string, string]>(
-        this.recipients.map(async (recipientPublicKey) => {
-          const wrappingKey = await Asymmetric.deriveWrappingKey(
-            recipientPublicKey,
-            this.contentPrivateKey
-          )
-
-          return Promise.all([
-            Asymmetric.calculateKeyThumbprint(recipientPublicKey),
-            Symmetric.wrapKey(this.contentEncryptionKey, wrappingKey)
-          ])
-        })
-      )
-    )
+    }))
   }
 }

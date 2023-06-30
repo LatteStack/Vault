@@ -5,6 +5,6 @@ export interface PackageHeader {
 }
 
 export interface ExportedPackageHeader {
-  recipientToWrappedCEK: Record<string, string>
-  contentPublicKey: string
+  recipients: Record<string, string>
+  CPK: string
 }

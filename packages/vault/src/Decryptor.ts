@@ -1,18 +1,30 @@
-import { bufferToText, readAllChunks, sourceToReadableStream } from "./helpers"
+import { InvalidRecipientException } from "./Exception"
+import { base64UrlToBuffer, bufferToText, readAllChunks } from "./helpers"
 import { PrivateKeychain } from "./Keychain"
 import { DecryptionStream } from "./streams"
-import { Source } from "./types"
 
 export class Decryptor {
-  private readonly source: ReadableStream<BufferSource>
+  private readonly source: ReadableStream<Uint8Array>
 
   private recipientKeyPair?: CryptoKeyPair
 
-  constructor(source: Source) {
-    this.source = sourceToReadableStream(source)
+  constructor(source: BodyInit) {
+    const response = new Response(
+      typeof source === 'string' ? base64UrlToBuffer(source) : source
+    )
+
+    if (response.body == null) {
+      throw new Error('Invalid source.')
+    }
+
+    this.source = response.body
   }
 
-  setRecipient(recipient: PrivateKeychain) {
+  setRecipient(recipient: PrivateKeychain): this {
+    if (recipient instanceof PrivateKeychain !== true) {
+      throw new InvalidRecipientException('Recipient must be instanceof PrivateKeychain')
+    }
+
     this.recipientKeyPair = recipient.getKeyPair('ECDH')
     return this
   }
@@ -23,11 +35,11 @@ export class Decryptor {
     }
 
     return this.source
-      .pipeThrough(new DecryptionStream(this.recipientKeyPair))
+      .pipeThrough(DecryptionStream.create(this.recipientKeyPair))
   }
 
   async arrayBuffer(): Promise<ArrayBuffer> {
-    return readAllChunks(this.stream())
+    return (await readAllChunks(this.stream())).buffer
   }
 
   async text(): Promise<string> {

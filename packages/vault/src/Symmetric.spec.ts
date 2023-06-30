@@ -21,43 +21,18 @@ describe('Symmetric', () => {
 
   })
 
-  describe('generateIV', () => {
-    it('should work correctly', () => {
-      const symmetric = new Symmetric({ key })
-      const buffer = symmetric.generateIV()
-      expect(buffer instanceof ArrayBuffer).toBeTruthy()
-      // https://developer.mozilla.org/en-US/docs/Web/API/AesGcmParams#iv
-      expect(buffer.byteLength).toBe(12)
-    })
-  })
-
   describe('encrypt', () => {
     it('should work correctly', async () => {
-      const symmetric = new Symmetric({ key })
+      const symmetric = new Symmetric(key)
       const ciphertext = await symmetric.encrypt(plaintext)
       // iv_length(12) + ciphertext_length(same as plaintext) + tag_length(16)
       expect(ciphertext.byteLength).toBe(12 + plaintext.byteLength + 16)
     })
   })
 
-  describe('encryptFile', () => {
-    it('should work correctly', async () => {
-      const symmetric = new Symmetric({ key })
-      const plainblob = new Blob([plaintext])
-      const stream = await symmetric.encryptFile(plainblob)
-      const writeCallback = jest.fn((chunk) => chunk)
-
-      await stream.pipeTo(new WritableStream({
-        write: writeCallback
-      }))
-
-      expect(writeCallback).toBeCalled()
-    })
-  })
-
   describe('decrypt', () => {
     it('should work correctly', async () => {
-      const symmetric = new Symmetric({ key })
+      const symmetric = new Symmetric(key)
       const ciphertext = await symmetric.encrypt(plaintext)
       const actualPlaintext = await symmetric.decrypt(ciphertext)
       expect(isEqual(actualPlaintext, plaintext)).toBeTruthy()
@@ -65,21 +40,21 @@ describe('Symmetric', () => {
     })
   })
 
-  describe('AesKey', () => {
-    let wrappingKey!: CryptoKey
+  // describe('AesKey', () => {
+  //   let wrappingKey!: CryptoKey
 
-    beforeAll(async () => {
-      wrappingKey = await crypto.subtle.generateKey(
-        {
-          name: "AES-GCM",
-          length: 256,
-        },
-        true,
-        ["encrypt", "decrypt", 'wrapKey', 'unwrapKey']
-      )
-    })
+  //   beforeAll(async () => {
+  //     wrappingKey = await crypto.subtle.generateKey(
+  //       {
+  //         name: "AES-GCM",
+  //         length: 256,
+  //       },
+  //       true,
+  //       ["encrypt", "decrypt", 'wrapKey', 'unwrapKey']
+  //     )
+  //   })
 
-    let compositedKey!: ArrayBuffer
+  //   let compositedKey!: ArrayBuffer
 
     // it('should correctly wrap key', async () => {
     //   const symmetric = new Symmetric({ key: wrappingKey })
@@ -92,5 +67,11 @@ describe('Symmetric', () => {
     //   const rawKey = await symmetric.unwrapAesKey(compositedKey)
     //   expect(rawKey).toBeDefined()
     // })
-  })
+  // })
+
+//   generateEncryptionKey
+// generateWrappingKey
+// wrapKey
+// unwrapEncryptionKey
+// unwrapPrivateKey
 })

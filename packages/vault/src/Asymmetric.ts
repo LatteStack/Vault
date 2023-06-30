@@ -2,24 +2,9 @@ import { z } from "zod"
 import {
   AES_KEY_LENGTH_IN_BITS,
  } from "./constants"
-import { base64ToBuffer, bufferToBase64, digest, textToBuffer } from "./helpers"
+import { base64UrlToBuffer, bufferToBase64Url, digest, textToBuffer } from "./helpers"
 
 export class Asymmetric {
-  // static unwrapPrivateKey(
-  //   wrappedKey: BufferSource,
-  //   unwrappingKey: CryptoKey,
-  // ) {
-  //   return crypto.subtle.unwrapKey(
-  //     'raw',
-  //     wrappedKey,
-  //     unwrappingKey,
-  //     { name: 'AES-GCM', iv },
-  //     { name: 'AES-GCM' },
-  //     false,
-  //     ['encrypt', 'decrypt']
-  //   )
-  // }
-
   static async deriveWrappingKey(
     publicKey: CryptoKey,
     privateKey: CryptoKey
@@ -56,7 +41,7 @@ export class Asymmetric {
   ): Promise<CryptoKey> {
     return crypto.subtle.importKey(
       'raw',
-      base64ToBuffer(keyData),
+      base64UrlToBuffer(keyData),
       { name: algorithmName, namedCurve: 'P-256' },
       true,
       algorithmName === 'ECDSA' ? ['verify'] : []
@@ -106,6 +91,6 @@ export class Asymmetric {
       )
     )
 
-    return bufferToBase64(thumbprint)
+    return bufferToBase64Url(thumbprint)
   }
 }

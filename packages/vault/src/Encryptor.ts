@@ -1,19 +1,23 @@
 import {
-  bufferToBase64,
+  bufferToBase64Url,
   readAllChunks,
-  sourceToReadableStream,
 } from "./helpers"
 import { Keychain } from "./Keychain"
 import { EncryptionStream } from "./streams";
-import { Source } from "./types";
 
 export class Encryptor {
-  private readonly source: ReadableStream<BufferSource>
+  private readonly source: ReadableStream<Uint8Array>
 
   private recipients?: CryptoKey[]
 
-  constructor(source: Source) {
-    this.source = sourceToReadableStream(source)
+  constructor(source: BodyInit) {
+    const response = new Response(source)
+
+    if (response.body == null) {
+      throw new Error('Invalid source.')
+    }
+
+    this.source = response.body
   }
 
   addRecipient(recipient: Keychain) {
@@ -36,17 +40,16 @@ export class Encryptor {
     }
 
     return this.source
-      .pipeThrough(new EncryptionStream(this.recipients))
+      .pipeThrough(EncryptionStream.create(this.recipients))
   }
 
   async arrayBuffer(): Promise<ArrayBuffer> {
-    return readAllChunks(this.stream())
+    return (await readAllChunks(this.stream())).buffer
   }
 
   async text(): Promise<string> {
-    return bufferToBase64(
+    return bufferToBase64Url(
       await this.arrayBuffer()
     )
   }
 }
-

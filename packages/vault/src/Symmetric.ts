@@ -4,8 +4,8 @@ import {
   AES_TAG_LENGTH_IN_BITS
 } from "./constants";
 import {
-  bufferToBase64,
-  base64ToBuffer,
+  bufferToBase64Url,
+  base64UrlToBuffer,
   concatChunks, extractIvAndCiphertext, getRandomValues
 } from "./helpers";
 
@@ -23,12 +23,6 @@ export class Symmetric {
       this.key,
       data
     )
-      .catch((reason) => {
-        // SubtleCrypto.encrypt usually don't throw specific error messages.
-        throw class SymmetricEncryptError extends Error {
-          cause = reason
-        }
-      })
 
     return concatChunks([iv, ciphertext], iv.byteLength + ciphertext.byteLength)
   }
@@ -41,12 +35,6 @@ export class Symmetric {
       this.key,
       data
     )
-      .catch((reason) => {
-        // SubtleCrypto.decrypt usually don't throw specific error messages.
-        throw class SymmetricDecryptError extends Error {
-          cause = reason
-        }
-      })
 
     return new Uint8Array(plaintext)
   }
@@ -85,7 +73,7 @@ export class Symmetric {
       { name: 'AES-GCM', iv }
     )
 
-    return bufferToBase64(
+    return bufferToBase64Url(
       concatChunks([iv, wrappedKey])
     )
   }
@@ -95,7 +83,7 @@ export class Symmetric {
     unwrappingKey: CryptoKey
   ): Promise<CryptoKey> {
     const [iv, wrappedKey] = extractIvAndCiphertext(
-      base64ToBuffer(exportedKey)
+      base64UrlToBuffer(exportedKey)
     )
 
     return crypto.subtle.unwrapKey(
@@ -115,7 +103,7 @@ export class Symmetric {
     unwrappingKey: CryptoKey
   ): Promise<CryptoKey> {
     const [iv, wrappedKey] = extractIvAndCiphertext(
-      base64ToBuffer(exportedKey)
+      base64UrlToBuffer(exportedKey)
     )
 
     if (algorithmName === 'ECDSA') {

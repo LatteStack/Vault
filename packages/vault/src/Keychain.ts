@@ -1,9 +1,9 @@
 import { z } from "zod"
 import {
-  base64ToObject,
+  base64UrlToObject,
   exportKey,
   normalizeText,
-  objectToBase64,
+  objectToBase64Url,
   textToBuffer,
   digest
 } from "./helpers"
@@ -114,7 +114,7 @@ export class PrivateKeychain extends Keychain {
   }
 
   async exportPublic(): Promise<string> {
-    return objectToBase64<ExportedKeychain<'Public'>>({
+    return objectToBase64Url<ExportedKeychain<'Public'>>({
       ECDSA: {
         publicKey: await exportKey(this.ECDSA.publicKey),
       },
@@ -138,7 +138,7 @@ export class PrivateKeychain extends Keychain {
         encryptedPrivateKey: makeImportPrivateKeySchema('ECDH', unlockKey),
       }),
     }).parseAsync(
-      base64ToObject(exportedPrivateKeychain)
+      base64UrlToObject(exportedPrivateKeychain)
     )
 
     return new PrivateKeychain({
@@ -165,7 +165,7 @@ export class PrivateKeychain extends Keychain {
       }
     }
 
-    return objectToBase64(exported)
+    return objectToBase64Url(exported)
   }
 }
 
@@ -195,7 +195,7 @@ export class PublicKeychain extends Keychain {
   }
 
   async export(): Promise<string> {
-    return objectToBase64<ExportedKeychain<'Public'>>({
+    return objectToBase64Url<ExportedKeychain<'Public'>>({
       ECDSA: {
         publicKey: await exportKey(this.ECDSA.publicKey),
       },
@@ -223,7 +223,7 @@ export class PublicKeychain extends Keychain {
         encryptedPrivateKey: encryptedPrivateKeySchema,
       }),
     }).parseAsync(
-      base64ToObject(exportedPublicKeychain)
+      base64UrlToObject(exportedPublicKeychain)
     )
 
     return new PublicKeychain({
