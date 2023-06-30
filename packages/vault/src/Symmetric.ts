@@ -63,11 +63,12 @@ export class Symmetric {
 
   static async wrapKey(
     key: CryptoKey,
-    wrappingKey: CryptoKey
+    wrappingKey: CryptoKey,
+    format: KeyFormat = 'raw'
   ): Promise<string> {
     const iv = generateIV()
     const wrappedKey = await crypto.subtle.wrapKey(
-      'raw',
+      format,
       key,
       wrappingKey,
       { name: 'AES-GCM', iv }
@@ -108,23 +109,23 @@ export class Symmetric {
 
     if (algorithmName === 'ECDSA') {
       return crypto.subtle.unwrapKey(
-        'raw',
+        'jwk',
         wrappedKey,
         unwrappingKey,
         { name: 'AES-GCM', iv },
-        'AES-GCM',
+        { name: 'ECDSA', namedCurve: 'P-256' },
         true,
-        ["sign", "verify"]
+        ["sign"]
       )
     }
 
     if (algorithmName === 'ECDH') {
       return crypto.subtle.unwrapKey(
-        'raw',
+        'jwk',
         wrappedKey,
         unwrappingKey,
         { name: 'AES-GCM', iv },
-        'AES-GCM',
+        { name: 'ECDH', namedCurve: 'P-256' },
         true,
         ['deriveKey', 'deriveBits']
       )

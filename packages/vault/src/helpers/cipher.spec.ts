@@ -1,3 +1,4 @@
+import { randomBytes, randomUUID } from "crypto";
 import {
   exportKey,
 extractIvAndCiphertext,
@@ -5,6 +6,9 @@ digest,
 getRandomValues,
 generateHmacKeyFromBuffer,
 HMAC,
+deriveUnlockKeyFromSecret,
+generateUnlockKey,
+deriveUnlockKeyFromPassword,
  } from "./cipher";
 
 describe('cipher', () => {
@@ -20,6 +24,22 @@ describe('cipher', () => {
       )
 
       expect(exportKey(publicKey)).resolves.toBeDefined()
+    })
+  })
+
+  describe('exportJwk', () => {
+    it('should work', async () => {
+      const { publicKey, privateKey } = await crypto.subtle.generateKey(
+        {
+          name: "ECDSA",
+          namedCurve: "P-256",
+        },
+        true,
+        ["sign", "verify"]
+      )
+
+      expect(exportKey(publicKey)).resolves.toBeDefined()
+      expect(exportKey(privateKey)).resolves.toBeDefined()
     })
   })
 
@@ -64,5 +84,33 @@ describe('cipher', () => {
         getRandomValues(10).every((value) => value === 0)
       ).toBeFalsy()
     })
+  })
+
+  describe('Keychain', () => {
+    describe('deriveUnlockKeyFromSecret', () => {
+      it('should work',async () => {
+        await expect(deriveUnlockKeyFromSecret(randomUUID())).resolves.toBeDefined()
+      })
+    })
+
+    describe('generateUnlockKey', () => {
+      it('should work',async () => {
+        await expect(generateUnlockKey()).resolves.toBeDefined()
+      })
+    })
+
+    describe('deriveUnlockKeyFromPassword', () => {
+      it('should work',async () => {
+        const password = randomBytes(16).toString('hex')
+        const salt = randomBytes(16).toString('hex')
+        await expect(
+          deriveUnlockKeyFromPassword({
+            password,
+            salt,
+          })
+        ).resolves.toBeDefined()
+      })
+    })
+
   })
 })

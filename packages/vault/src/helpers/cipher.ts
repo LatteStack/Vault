@@ -1,10 +1,16 @@
+import { z } from "zod";
 import { AES_IV_LENGTH_IN_BYTES } from "../constants";
-import { bufferToBase64Url } from "./encoder";
+import { Symmetric } from "../Symmetric";
+import { bufferToBase64Url, normalizeText, objectToBase64Url, textToBuffer } from "./encoder";
 
 export async function exportKey(key: CryptoKey): Promise<string> {
-  return bufferToBase64Url(
-    await crypto.subtle.exportKey('raw', key)
+  return objectToBase64Url(
+    await crypto.subtle.exportKey('jwk', key)
   )
+}
+
+export async function exportJwk(key: CryptoKey): Promise<JsonWebKey> {
+  return crypto.subtle.exportKey('jwk', key)
 }
 
 export function extractIvAndCiphertext(data: Uint8Array): [Uint8Array, Uint8Array] {
@@ -56,4 +62,62 @@ export function getRandomValues(length: number, encoding?: | 'base64'): Uint8Arr
     default:
       return buffer
   }
+}
+
+
+export async function deriveUnlockKeyFromSecret(secret: string): Promise<CryptoKey> {
+  const keyMaterial = await digest(textToBuffer(secret))
+  return crypto.subtle.importKey(
+    'raw',
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ['wrapKey', 'unwrapKey']
+  )
+}
+
+export async function generateUnlockKey(): Promise<string> {
+  return exportKey(
+    await Symmetric.generateWrappingKey()
+  )
+}
+
+export async function deriveUnlockKeyFromPassword(options: {
+  password: string,
+  salt?: string,
+  iterations?: number
+}): Promise<CryptoKey> {
+  const { password: passphrase, salt, iterations } = await z.object({
+    password: z.string()
+      .trim()
+      .transform((value) => textToBuffer(normalizeText(value))),
+    salt: z.string()
+      .trim()
+      .transform((value) => textToBuffer(value))
+      .nullish(),
+    iterations: z.number()
+      .int()
+      .default(10_0000)
+  }).parseAsync(options)
+
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    passphrase,
+    "PBKDF2",
+    false,
+    ["deriveBits", "deriveKey"]
+  )
+
+  return crypto.subtle.deriveKey(
+    {
+      salt: salt ?? passphrase,
+      iterations,
+      name: "PBKDF2",
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ['wrapKey', 'unwrapKey']
+  )
 }

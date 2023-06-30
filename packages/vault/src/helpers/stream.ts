@@ -21,8 +21,6 @@ async function* streamAsyncIterable(stream: ReadableStream<Uint8Array>) {
       if (done) return;
       yield value;
     }
-  } catch (error) {
-    throw error
   } finally {
     reader.releaseLock();
   }

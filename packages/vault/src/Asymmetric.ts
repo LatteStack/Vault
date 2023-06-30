@@ -37,11 +37,11 @@ export class Asymmetric {
 
   static importPublicKey(
     algorithmName: 'ECDSA' | 'ECDH',
-    keyData: string
+    keyData: JsonWebKey
   ): Promise<CryptoKey> {
     return crypto.subtle.importKey(
-      'raw',
-      base64UrlToBuffer(keyData),
+      'jwk',
+      keyData,
       { name: algorithmName, namedCurve: 'P-256' },
       true,
       algorithmName === 'ECDSA' ? ['verify'] : []
