@@ -5,7 +5,7 @@ import {
 import { Keychain } from "./Keychain"
 import { EncryptionStream } from "./streams";
 
-export class Encryptor {
+export class Encryption {
   private readonly source: ReadableStream<Uint8Array>
 
   private recipients?: CryptoKey[]

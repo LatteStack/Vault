@@ -39,39 +39,4 @@ describe('Symmetric', () => {
       // expect(actualPlaintext).toEqual(plaintext)
     })
   })
-
-  // describe('AesKey', () => {
-  //   let wrappingKey!: CryptoKey
-
-  //   beforeAll(async () => {
-  //     wrappingKey = await crypto.subtle.generateKey(
-  //       {
-  //         name: "AES-GCM",
-  //         length: 256,
-  //       },
-  //       true,
-  //       ["encrypt", "decrypt", 'wrapKey', 'unwrapKey']
-  //     )
-  //   })
-
-  //   let compositedKey!: ArrayBuffer
-
-    // it('should correctly wrap key', async () => {
-    //   const symmetric = new Symmetric({ key: wrappingKey })
-    //   compositedKey = await symmetric.wrapAesKey(key)
-    //   expect(compositedKey).toBeDefined()
-    // })
-
-    // it('should correctly unwrap key', async () => {
-    //   const symmetric = new Symmetric({ key: wrappingKey })
-    //   const rawKey = await symmetric.unwrapAesKey(compositedKey)
-    //   expect(rawKey).toBeDefined()
-    // })
-  // })
-
-//   generateEncryptionKey
-// generateWrappingKey
-// wrapKey
-// unwrapEncryptionKey
-// unwrapPrivateKey
 })

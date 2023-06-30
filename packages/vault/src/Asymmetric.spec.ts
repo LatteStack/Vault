@@ -1,6 +1,6 @@
 import { isEqual } from "lodash";
 import { Asymmetric } from "./Asymmetric";
-import { exportKey } from "./helpers";
+import { exportJwk } from "./helpers";
 
 describe('Asymmetric', () => {
   describe('generateKeyPair', () => {
@@ -29,7 +29,7 @@ describe('Asymmetric', () => {
 
   describe('importPublicKey', () => {
     it('should work', async () => {
-      const exportedKey = await exportKey((await Asymmetric.generateKeyPair('ECDH')).publicKey)
+      const exportedKey = await exportJwk((await Asymmetric.generateKeyPair('ECDH')).publicKey)
       expect(
         Asymmetric.importPublicKey('ECDH', exportedKey)
       ).resolves.toBeDefined()

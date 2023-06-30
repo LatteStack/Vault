@@ -1,5 +1,5 @@
-import { Encryptor } from "./Encryptor";
-import { Decryptor } from "./Decryptor";
+import { Encryption } from "./Encryption";
+import { Decryption } from "./Decryption";
 import { Keychain, PrivateKeychain } from "./Keychain";
 import { randomBytes, randomInt } from "crypto";
 
@@ -10,14 +10,14 @@ describe('Decryptor', () => {
   const aliceKeychain = Keychain.generate()
   const ciphertext = Promise.all([bobKeychain, aliceKeychain])
     .then(([bob, alice]) => {
-      return new Encryptor(plaintext)
+      return new Encryption(plaintext)
         .addRecipient(bob)
         .addRecipient(alice)
         .text()
     })
   const ciphertextBuffer = Promise.all([bobKeychain, aliceKeychain])
     .then(([bob, alice]) => {
-      return new Encryptor(plaintext)
+      return new Encryption(plaintext)
         .addRecipient(bob)
         .addRecipient(alice)
         .arrayBuffer()
@@ -47,19 +47,19 @@ describe('Decryptor', () => {
   }
 
   it('should be defined', async () => {
-    const encryptor = new Decryptor(await ciphertext)
+    const encryptor = new Decryption(await ciphertext)
     expect(encryptor).toBeDefined()
   })
 
   it('should throw when no recipients', async () => {
-    const encryptor = new Decryptor(await ciphertext)
+    const encryptor = new Decryption(await ciphertext)
     expect(() => encryptor.stream()).toThrow()
     expect(encryptor.arrayBuffer()).rejects.toThrow()
     expect(encryptor.text()).rejects.toThrow()
   })
 
   it('should can setRecipient', async () => {
-    const encryptor = new Decryptor(await ciphertext)
+    const encryptor = new Decryption(await ciphertext)
     expect(Promise.resolve(
       encryptor.setRecipient(await bobKeychain)
     )).resolves.not.toThrow()
@@ -73,7 +73,7 @@ describe('Decryptor', () => {
   it('should throw when source is invalid base64', async () => {
     const invalidSource = `${await ciphertext}35`
     await expect(
-      new Decryptor(invalidSource)
+      new Decryption(invalidSource)
         .setRecipient(await bobKeychain)
         .text()
     ).rejects.toBeDefined()
@@ -82,7 +82,7 @@ describe('Decryptor', () => {
   it('should throw when source is invalid arrayBuffer', async () => {
     const invalidSource = (await ciphertextBuffer).slice(0, 10)
     await expect(
-      new Decryptor(invalidSource)
+      new Decryption(invalidSource)
         .setRecipient(await bobKeychain)
         .arrayBuffer()
     ).rejects.toBeDefined()
@@ -90,7 +90,7 @@ describe('Decryptor', () => {
 
   describe('stream', () => {
     test.each(createSources())('it should work with different source.', async (source, keychain) => {
-      const stream = new Decryptor(await source)
+      const stream = new Decryption(await source)
         .setRecipient(await keychain)
         .stream()
       expect(stream).toBeInstanceOf(ReadableStream)
@@ -104,7 +104,7 @@ describe('Decryptor', () => {
 
   describe('arrayBuffer', () => {
     test.each(createSources())('it should work with different source.', async (source, keychain) => {
-      const arrayBuffer = await new Decryptor(await source)
+      const arrayBuffer = await new Decryption(await source)
         .setRecipient(await keychain)
         .arrayBuffer()
       expect(arrayBuffer).toBeInstanceOf(ArrayBuffer)
@@ -113,7 +113,7 @@ describe('Decryptor', () => {
 
   describe('text', () => {
     test.each(createSources())('it should work with different source.', async (source, keychain) => {
-      const text = await new Decryptor(await source)
+      const text = await new Decryption(await source)
         .setRecipient(await keychain)
         .text()
       expect(typeof text === 'string').toBeTruthy()

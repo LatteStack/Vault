@@ -3,7 +3,7 @@ import { base64UrlToBuffer, bufferToText, readAllChunks } from "./helpers"
 import { PrivateKeychain } from "./Keychain"
 import { DecryptionStream } from "./streams"
 
-export class Decryptor {
+export class Decryption {
   private readonly source: ReadableStream<Uint8Array>
 
   private recipientKeyPair?: CryptoKeyPair

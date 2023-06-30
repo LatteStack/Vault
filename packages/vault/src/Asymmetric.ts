@@ -2,7 +2,7 @@ import { z } from "zod"
 import {
   AES_KEY_LENGTH_IN_BITS,
  } from "./constants"
-import { base64UrlToBuffer, bufferToBase64Url, digest, textToBuffer } from "./helpers"
+import { bufferToBase64Url, digest, textToBuffer } from "./helpers"
 
 export class Asymmetric {
   static async deriveWrappingKey(

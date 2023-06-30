@@ -1,4 +1,4 @@
-import { Encryptor } from "./Encryptor";
+import { Encryption } from "./Encryption";
 import { Keychain } from "./Keychain";
 
 describe('Encryptor', () => {
@@ -26,26 +26,26 @@ describe('Encryptor', () => {
   })
 
   it('should be defined', () => {
-    const encryptor = new Encryptor(plaintext)
+    const encryptor = new Encryption(plaintext)
     expect(encryptor).toBeDefined()
   })
 
   it('should throw when no recipients', () => {
-    const encryptor = new Encryptor(plaintext)
+    const encryptor = new Encryption(plaintext)
     expect(() => encryptor.stream()).toThrow()
     expect(encryptor.arrayBuffer()).rejects.toThrow()
     expect(encryptor.text()).rejects.toThrow()
   })
 
   it('should can addRecipient', () => {
-    const encryptor = new Encryptor(plaintext)
+    const encryptor = new Encryption(plaintext)
     expect(() => encryptor.addRecipient(bobKeychain)).not.toThrow()
   })
 
   describe('stream', () => {
     createSources().forEach((source) => {
       it(`should return a ReadableStream when source is ${source.constructor.name}`, () => {
-        const stream = new Encryptor(source)
+        const stream = new Encryption(source)
           .addRecipient(bobKeychain)
           .stream()
         expect(stream).toBeInstanceOf(ReadableStream)
@@ -57,7 +57,7 @@ describe('Encryptor', () => {
   describe('arrayBuffer', () => {
     createSources().forEach((source) => {
       it(`should return a arrayBuffer when source is ${source.constructor.name}`, async () => {
-        const arrayBuffer = await new Encryptor(source)
+        const arrayBuffer = await new Encryption(source)
           .addRecipient(bobKeychain)
           .arrayBuffer()
 
@@ -69,7 +69,7 @@ describe('Encryptor', () => {
   describe('text', () => {
     createSources().forEach((source) => {
       it(`should return a text when source is ${source.constructor.name}`, async () => {
-        const text = await new Encryptor(source)
+        const text = await new Encryption(source)
           .addRecipient(bobKeychain)
           .text()
         expect(typeof text === 'string').toBeTruthy()
