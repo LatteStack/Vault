@@ -1,6 +1,9 @@
 import { Asymmetric } from '../Asymmetric'
 import { DEFAULT_CHUNK_SIZE } from '../constants'
-import { exportJwk, generateHmacKeyFromBuffer, HMAC, objectToBuffer, uint32ToBuffer, withEquallySized } from '../helpers'
+import {
+  exportJwk, generateHmacKeyFromBuffer, HMAC, objectToBuffer,
+  uint32ToBuffer, withEquallySized
+} from '../helpers'
 import { Symmetric } from '../Symmetric'
 import { type ExportedPackageHeader } from '../types'
 
