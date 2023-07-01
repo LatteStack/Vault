@@ -1,12 +1,7 @@
-import { isEqual, noop } from "lodash";
-import { EquallySizedStream } from "./EquallySizedStream";
+import { isEqual, noop } from "lodash"
+import { withEquallySized } from "./withEquallySized"
 
-describe('EquallySizedStream', () => {
-  it('should be defined', () => {
-    const instance = new EquallySizedStream({ chunkSize: 1 })
-    expect(instance).toBeDefined()
-  })
-
+describe('withEquallySized', () => {
   it('Should work correctly when the upstream size is less than the chunkSize.', async () => {
     const chunkSize = 4
     const chunks: Uint8Array[] = []
@@ -18,10 +13,10 @@ describe('EquallySizedStream', () => {
         controller.close()
       },
     })
-      .pipeThrough(new EquallySizedStream({
+      .pipeThrough(new TransformStream(withEquallySized({
         chunkSize,
         transform: fn,
-      }))
+      })))
       .pipeTo(new WritableStream({ write: noop }))
 
     expect(fn).toBeCalledTimes(1)
@@ -42,10 +37,10 @@ describe('EquallySizedStream', () => {
         controller.close()
       }
     })
-      .pipeThrough(new EquallySizedStream({
+      .pipeThrough(new TransformStream(withEquallySized({
         chunkSize,
         transform: fn,
-      }))
+      })))
       .pipeTo(new WritableStream({ write: noop }))
 
     expect(fn).toBeCalledTimes(1)
@@ -66,10 +61,10 @@ describe('EquallySizedStream', () => {
         controller.close()
       }
     })
-      .pipeThrough(new EquallySizedStream({
+      .pipeThrough(new TransformStream(withEquallySized({
         chunkSize,
         transform: fn,
-      }))
+      })))
       .pipeTo(new WritableStream({ write: noop }))
 
     expect(fn).toBeCalledTimes(2)
@@ -90,13 +85,13 @@ describe('EquallySizedStream', () => {
         controller.close()
       }
     })
-      .pipeThrough(new EquallySizedStream({
+      .pipeThrough(new TransformStream(withEquallySized({
         chunkSize,
         transform: fn,
         resizeChunk: () => {
           return new Uint8Array([3, 4, 5])
         }
-      }))
+      })))
       .pipeTo(new WritableStream({ write: noop }))
 
     expect(fn).toBeCalledTimes(2)
