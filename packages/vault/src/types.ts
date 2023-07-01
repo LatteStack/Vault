@@ -6,5 +6,5 @@ export interface PackageHeader {
 
 export interface ExportedPackageHeader {
   recipients: Record<string, string>
-  CPK: string
+  contentPublicKey: JsonWebKey
 }

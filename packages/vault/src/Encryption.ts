@@ -1,16 +1,16 @@
 import {
   bufferToBase64Url,
-  readAllChunks,
-} from "./helpers"
-import { Keychain } from "./Keychain"
-import { EncryptionStream } from "./streams";
+  readAllChunks
+} from './helpers'
+import { type Keychain } from './Keychain'
+import { EncryptionStream } from './streams'
 
 export class Encryption {
   private readonly source: ReadableStream<Uint8Array>
 
   private recipients?: CryptoKey[]
 
-  constructor(source: BodyInit) {
+  constructor (source: BodyInit) {
     const response = new Response(source)
 
     if (response.body == null) {
@@ -20,7 +20,7 @@ export class Encryption {
     this.source = response.body
   }
 
-  addRecipient(recipient: Keychain) {
+  addRecipient (recipient: Keychain): this {
     const publicKey = recipient.getPublicKey('ECDH')
 
     if (!Array.isArray(this.recipients)) {
@@ -34,7 +34,7 @@ export class Encryption {
     return this
   }
 
-  stream(): ReadableStream<Uint8Array> {
+  stream (): ReadableStream<Uint8Array> {
     if (this.recipients == null || this.recipients.length === 0) {
       throw new Error('Please call addRecipient first to add recipient.')
     }
@@ -43,11 +43,11 @@ export class Encryption {
       .pipeThrough(EncryptionStream.create(this.recipients))
   }
 
-  async arrayBuffer(): Promise<ArrayBuffer> {
+  async arrayBuffer (): Promise<ArrayBuffer> {
     return (await readAllChunks(this.stream())).buffer
   }
 
-  async text(): Promise<string> {
+  async text (): Promise<string> {
     return bufferToBase64Url(
       await this.arrayBuffer()
     )

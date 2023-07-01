@@ -1,24 +1,22 @@
-import { cipher } from "./utils"
-import { Symmetric } from "./Symmetric";
-import isEqual from "lodash/isEqual";
+import { Symmetric } from './Symmetric'
+import isEqual from 'lodash/isEqual'
 
 describe('Symmetric', () => {
   let key!: CryptoKey
   const PLAINTEXT_LENGTH = 100
-  const plaintext: ArrayBuffer = new ArrayBuffer(PLAINTEXT_LENGTH)
+  const plaintext: Uint8Array = new Uint8Array(PLAINTEXT_LENGTH)
 
   beforeAll(async () => {
-    cipher.getRandomValues(new Uint8Array(plaintext))
+    crypto.getRandomValues(new Uint8Array(plaintext))
 
-    key = await cipher.subtle.generateKey(
+    key = await crypto.subtle.generateKey(
       {
-        name: "AES-GCM",
-        length: 256,
+        name: 'AES-GCM',
+        length: 256
       },
       true,
-      ["encrypt", "decrypt"]
+      ['encrypt', 'decrypt']
     )
-
   })
 
   describe('encrypt', () => {

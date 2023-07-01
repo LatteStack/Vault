@@ -2,24 +2,24 @@ import {
   AES_KEY_LENGTH_IN_BITS,
   AES_IV_LENGTH_IN_BYTES,
   AES_TAG_LENGTH_IN_BITS
-} from "./constants";
+} from './constants'
 import {
   bufferToBase64Url,
   base64UrlToBuffer,
   concatChunks, extractIvAndCiphertext, getRandomValues
-} from "./helpers";
+} from './helpers'
 
-function generateIV(): ArrayBuffer {
+function generateIV (): ArrayBuffer {
   return getRandomValues(AES_IV_LENGTH_IN_BYTES)
 }
 
 export class Symmetric {
-  constructor(private readonly key: CryptoKey) {}
+  constructor (private readonly key: CryptoKey) {}
 
-  async encrypt(data: BufferSource, additionalData?: BufferSource): Promise<Uint8Array> {
+  async encrypt (data: BufferSource, additionalData?: BufferSource): Promise<Uint8Array> {
     const iv = generateIV()
     const ciphertext = await crypto.subtle.encrypt(
-      { iv, additionalData, name: "AES-GCM", tagLength: AES_TAG_LENGTH_IN_BITS },
+      { iv, additionalData, name: 'AES-GCM', tagLength: AES_TAG_LENGTH_IN_BITS },
       this.key,
       data
     )
@@ -27,11 +27,11 @@ export class Symmetric {
     return concatChunks([iv, ciphertext], iv.byteLength + ciphertext.byteLength)
   }
 
-  async decrypt(ciphertext: Uint8Array, additionalData?: BufferSource): Promise<Uint8Array> {
+  async decrypt (ciphertext: Uint8Array, additionalData?: BufferSource): Promise<Uint8Array> {
     const [iv, data] = extractIvAndCiphertext(ciphertext)
 
     const plaintext: ArrayBuffer = await crypto.subtle.decrypt(
-      { iv, additionalData, name: "AES-GCM", tagLength: AES_TAG_LENGTH_IN_BITS },
+      { iv, additionalData, name: 'AES-GCM', tagLength: AES_TAG_LENGTH_IN_BITS },
       this.key,
       data
     )
@@ -39,29 +39,29 @@ export class Symmetric {
     return new Uint8Array(plaintext)
   }
 
-  static generateEncryptionKey(): Promise<CryptoKey> {
-    return crypto.subtle.generateKey(
+  static async generateEncryptionKey (): Promise<CryptoKey> {
+    return await crypto.subtle.generateKey(
       {
-        name: "AES-GCM",
-        length: AES_KEY_LENGTH_IN_BITS,
+        name: 'AES-GCM',
+        length: AES_KEY_LENGTH_IN_BITS
       },
       true,
       ['encrypt', 'decrypt']
     )
   }
 
-  static generateWrappingKey(): Promise<CryptoKey> {
-    return crypto.subtle.generateKey(
+  static async generateWrappingKey (): Promise<CryptoKey> {
+    return await crypto.subtle.generateKey(
       {
-        name: "AES-GCM",
-        length: AES_KEY_LENGTH_IN_BITS,
+        name: 'AES-GCM',
+        length: AES_KEY_LENGTH_IN_BITS
       },
       true,
       ['wrapKey', 'unwrapKey']
     )
   }
 
-  static async wrapKey(
+  static async wrapKey (
     key: CryptoKey,
     wrappingKey: CryptoKey,
     format: KeyFormat = 'raw'
@@ -79,7 +79,7 @@ export class Symmetric {
     )
   }
 
-  static unwrapEncryptionKey(
+  static async unwrapEncryptionKey (
     exportedKey: string,
     unwrappingKey: CryptoKey
   ): Promise<CryptoKey> {
@@ -87,7 +87,7 @@ export class Symmetric {
       base64UrlToBuffer(exportedKey)
     )
 
-    return crypto.subtle.unwrapKey(
+    return await crypto.subtle.unwrapKey(
       'raw',
       wrappedKey,
       unwrappingKey,
@@ -98,7 +98,7 @@ export class Symmetric {
     )
   }
 
-  static unwrapPrivateKey(
+  static async unwrapPrivateKey (
     algorithmName: 'ECDSA' | 'ECDH',
     exportedKey: string,
     unwrappingKey: CryptoKey
@@ -108,19 +108,19 @@ export class Symmetric {
     )
 
     if (algorithmName === 'ECDSA') {
-      return crypto.subtle.unwrapKey(
+      return await crypto.subtle.unwrapKey(
         'jwk',
         wrappedKey,
         unwrappingKey,
         { name: 'AES-GCM', iv },
         { name: 'ECDSA', namedCurve: 'P-256' },
         true,
-        ["sign"]
+        ['sign']
       )
     }
 
     if (algorithmName === 'ECDH') {
-      return crypto.subtle.unwrapKey(
+      return await crypto.subtle.unwrapKey(
         'jwk',
         wrappedKey,
         unwrappingKey,

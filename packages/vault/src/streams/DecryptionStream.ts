@@ -1,22 +1,22 @@
-import { Asymmetric } from "../Asymmetric";
-import { AES_TAG_LENGTH_IN_BYTES, DEFAULT_CHUNK_SIZE, AES_IV_LENGTH_IN_BYTES } from "../constants";
-import { bufferToObject, bufferToUint32, concatChunks, generateHmacKeyFromBuffer, HMAC, uint32ToBuffer, withEquallySized } from "../helpers";
-import { Symmetric } from "../Symmetric";
-import { ExportedPackageHeader } from "../types";
+import { Asymmetric } from '../Asymmetric'
+import { AES_TAG_LENGTH_IN_BYTES, DEFAULT_CHUNK_SIZE, AES_IV_LENGTH_IN_BYTES } from '../constants'
+import { bufferToObject, bufferToUint32, concatChunks, generateHmacKeyFromBuffer, HMAC, uint32ToBuffer, withEquallySized } from '../helpers'
+import { Symmetric } from '../Symmetric'
+import { type ExportedPackageHeader } from '../types'
 
-function calculateEncryptedChunkSize(chunkSize: number): number {
+function calculateEncryptedChunkSize (chunkSize: number): number {
   return AES_IV_LENGTH_IN_BYTES + chunkSize + AES_TAG_LENGTH_IN_BYTES
 }
 
-async function parseHeader(
+async function parseHeader (
   recipientKeyPair: CryptoKeyPair,
-  header: Uint8Array,
+  header: Uint8Array
 ): Promise<{
-  hamcKey: CryptoKey
-  symmetric: Symmetric
-}> {
+    hamcKey: CryptoKey
+    symmetric: Symmetric
+  }> {
   const exportedHeader = bufferToObject<ExportedPackageHeader>(header)
-  const contentPublicKey = await Asymmetric.importPublicKey('ECDH', exportedHeader.CPK)
+  const contentPublicKey = await Asymmetric.importPublicKey('ECDH', exportedHeader.contentPublicKey)
   const keyThumbprint = await Asymmetric.calculateKeyThumbprint(recipientKeyPair.publicKey)
   const exportedKey = exportedHeader.recipients[keyThumbprint]
 
@@ -31,7 +31,7 @@ async function parseHeader(
 
   const contentEncryptionKey = await Symmetric.unwrapEncryptionKey(
     exportedKey,
-    wrappingKey,
+    wrappingKey
   )
 
   const hamcKey = await generateHmacKeyFromBuffer(header)
@@ -39,12 +39,13 @@ async function parseHeader(
 
   return {
     hamcKey,
-    symmetric,
+    symmetric
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class DecryptionStream {
-  static create(
+  static create (
     recipientKeyPair: CryptoKeyPair
   ): TransformStream<Uint8Array, Uint8Array> {
     let counter = 0
@@ -113,7 +114,7 @@ export class DecryptionStream {
           controller.error(error)
         }
       },
-      flush:async (controller) => {
+      flush: async (controller) => {
         if (initial == null) {
           controller.error('Invalid Source.')
         }

@@ -1,7 +1,7 @@
 class Exception extends Error {
   cause: any
 
-  constructor(reason?: string, options?: {
+  constructor (reason?: string, options?: {
     cause: any
   }) {
     super(reason)

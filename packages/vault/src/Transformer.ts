@@ -1,25 +1,25 @@
-import { nanoid } from "nanoid";
+import { nanoid } from 'nanoid'
 
-type Ref = {
+interface Ref {
   __REF__: string
 }
 
-function createRef(id: string): Ref {
+function createRef (id: string): Ref {
   return {
     __REF__: id
   }
 }
 
-function smellLikeRef(value: unknown): value is Ref {
+function smellLikeRef (value: unknown): value is Ref {
   return (value as Ref)?.__REF__ != null
 }
 
-function extractRef(refObj: Ref): string {
+function extractRef (refObj: Ref): string {
   return refObj.__REF__
 }
 
 export class Transformer {
-  serialize(data: any): [string, Record<string, ArrayBuffer>] {
+  serialize (data: any): [string, Record<string, ArrayBuffer>] {
     const bytesMap: Record<string, ArrayBuffer> = {}
 
     const json = JSON.stringify(data, (_, value) => {
@@ -53,4 +53,3 @@ export class Transformer {
     })
   }
 }
-

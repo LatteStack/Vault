@@ -13,6 +13,7 @@
     "**/.next/*": true,
     "**/pnpm-lock.yaml": true
   },
+  "exportall.config.semis": false,
   "exportall.config.folderListener": [
     "/packages/vault/src/helpers",
     "/packages/vault/src/streams"

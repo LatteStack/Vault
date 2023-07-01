@@ -1,10 +1,10 @@
-import { Asymmetric } from "../Asymmetric"
-import { DEFAULT_CHUNK_SIZE } from "../constants"
-import { exportKey, generateHmacKeyFromBuffer, HMAC, objectToBuffer, uint32ToBuffer, withEquallySized } from "../helpers"
-import { Symmetric } from "../Symmetric"
-import { ExportedPackageHeader } from "../types"
+import { Asymmetric } from '../Asymmetric'
+import { DEFAULT_CHUNK_SIZE } from '../constants'
+import { exportJwk, generateHmacKeyFromBuffer, HMAC, objectToBuffer, uint32ToBuffer, withEquallySized } from '../helpers'
+import { Symmetric } from '../Symmetric'
+import { type ExportedPackageHeader } from '../types'
 
-async function initialize(recipients: CryptoKey[]): Promise<{
+async function initialize (recipients: CryptoKey[]): Promise<{
   header: Uint8Array
   hamcKey: CryptoKey
   symmetric: Symmetric
@@ -14,11 +14,11 @@ async function initialize(recipients: CryptoKey[]): Promise<{
     { publicKey: contentPublicKey, privateKey: contentPrivateKey }
   ] = await Promise.all([
     Symmetric.generateEncryptionKey(),
-    Asymmetric.generateKeyPair('ECDH'),
+    Asymmetric.generateKeyPair('ECDH')
   ])
 
   const header = objectToBuffer<ExportedPackageHeader>({
-    CPK: await exportKey(contentPublicKey),
+    contentPublicKey: await exportJwk(contentPublicKey),
     recipients: Object.fromEntries(
       await Promise.all<[string, string]>(
         recipients.map(async (recipientPublicKey) => {
@@ -27,7 +27,7 @@ async function initialize(recipients: CryptoKey[]): Promise<{
             contentPrivateKey
           )
 
-          return Promise.all([
+          return await Promise.all([
             Asymmetric.calculateKeyThumbprint(recipientPublicKey),
             Symmetric.wrapKey(contentEncryptionKey, wrappingKey)
           ])
@@ -42,12 +42,13 @@ async function initialize(recipients: CryptoKey[]): Promise<{
   return {
     header,
     hamcKey,
-    symmetric,
+    symmetric
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class EncryptionStream {
-  static create(recipients: CryptoKey[]): TransformStream<Uint8Array, Uint8Array> {
+  static create (recipients: CryptoKey[]): TransformStream<Uint8Array, Uint8Array> {
     let counter = 0
     const initial = initialize(recipients)
 
@@ -73,7 +74,7 @@ export class EncryptionStream {
         } catch (error) {
           controller.error(error)
         }
-      },
+      }
     }))
   }
 }

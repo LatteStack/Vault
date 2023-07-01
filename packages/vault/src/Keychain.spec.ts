@@ -3,8 +3,8 @@ import {
   Keychain,
   PrivateKeychain,
   PublicKeychain
- } from "./Keychain";
-import { Symmetric } from "./Symmetric";
+} from './Keychain'
+import { Symmetric } from './Symmetric'
 
 describe('Keychain', () => {
   it('should generate unlock key', async () => {

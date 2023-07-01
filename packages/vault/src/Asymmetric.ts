@@ -1,11 +1,12 @@
-import { z } from "zod"
+import { z } from 'zod'
 import {
-  AES_KEY_LENGTH_IN_BITS,
- } from "./constants"
-import { bufferToBase64Url, digest, textToBuffer } from "./helpers"
+  AES_KEY_LENGTH_IN_BITS
+} from './constants'
+import { bufferToBase64Url, digest, textToBuffer } from './helpers'
 
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class Asymmetric {
-  static async deriveWrappingKey(
+  static async deriveWrappingKey (
     publicKey: CryptoKey,
     privateKey: CryptoKey
   ): Promise<CryptoKey> {
@@ -26,7 +27,7 @@ export class Asymmetric {
      */
     const keyMaterial = await digest(sharedSecret)
 
-    return crypto.subtle.importKey(
+    return await crypto.subtle.importKey(
       'raw',
       keyMaterial,
       { name: 'AES-GCM', length: AES_KEY_LENGTH_IN_BITS },
@@ -35,11 +36,11 @@ export class Asymmetric {
     )
   }
 
-  static importPublicKey(
+  static async importPublicKey (
     algorithmName: 'ECDSA' | 'ECDH',
     keyData: JsonWebKey
   ): Promise<CryptoKey> {
-    return crypto.subtle.importKey(
+    return await crypto.subtle.importKey(
       'jwk',
       keyData,
       { name: algorithmName, namedCurve: 'P-256' },
@@ -48,23 +49,23 @@ export class Asymmetric {
     )
   }
 
-  static generateKeyPair(algorithmName: 'ECDSA' | 'ECDH'): Promise<CryptoKeyPair> {
+  static async generateKeyPair (algorithmName: 'ECDSA' | 'ECDH'): Promise<CryptoKeyPair> {
     if (algorithmName === 'ECDSA') {
-      return crypto.subtle.generateKey(
+      return await crypto.subtle.generateKey(
         {
-          name: "ECDSA",
-          namedCurve: "P-256",
+          name: 'ECDSA',
+          namedCurve: 'P-256'
         },
         true,
-        ["sign", "verify"]
+        ['sign', 'verify']
       )
     }
 
     if (algorithmName === 'ECDH') {
-      return crypto.subtle.generateKey(
+      return await crypto.subtle.generateKey(
         {
-          name: "ECDH",
-          namedCurve: "P-256",
+          name: 'ECDH',
+          namedCurve: 'P-256'
         },
         true,
         ['deriveKey', 'deriveBits']
@@ -74,13 +75,13 @@ export class Asymmetric {
     throw new Error('Invalid algorithmName')
   }
 
-  static async calculateKeyThumbprint(key: CryptoKey) {
+  static async calculateKeyThumbprint (key: CryptoKey): Promise<string> {
     const jwk = await crypto.subtle.exportKey('jwk', key)
     const { crv, kty, x, y } = z.object({
       crv: z.string(),
       kty: z.string(),
       x: z.string(),
-      y: z.string(),
+      y: z.string()
     }).parse(jwk)
 
     const thumbprint = await digest(

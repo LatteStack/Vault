@@ -1,18 +1,18 @@
 import {
-normalizeText,
-textToBuffer,
-bufferToText,
-bufferToBase64Url,
-base64UrlToBuffer,
-objectToBuffer,
-bufferToObject,
-objectToBase64Url,
-base64UrlToObject,
-uint32ToBuffer,
-bufferToUint32,
-} from "./encoder";
-import { Buffer } from "buffer";
-import { isEqual } from "lodash";
+  normalizeText,
+  textToBuffer,
+  bufferToText,
+  bufferToBase64Url,
+  base64UrlToBuffer,
+  objectToBuffer,
+  bufferToObject,
+  objectToBase64Url,
+  base64UrlToObject,
+  uint32ToBuffer,
+  bufferToUint32
+} from './encoder'
+import { Buffer } from 'buffer'
+import { isEqual } from 'lodash'
 
 describe('encoder', () => {
   describe('normalizeText', () => {
@@ -119,7 +119,4 @@ describe('encoder', () => {
       expect(bufferToUint32(uint8Array.buffer)).toBe(4294967295)
     })
   })
-
 })
-
-

@@ -1,14 +1,14 @@
-import { isEqual } from "lodash";
-import { Asymmetric } from "./Asymmetric";
-import { exportJwk } from "./helpers";
+import { isEqual } from 'lodash'
+import { Asymmetric } from './Asymmetric'
+import { exportJwk } from './helpers'
 
 describe('Asymmetric', () => {
   describe('generateKeyPair', () => {
     it('should work', async () => {
-      expect(
+      await expect(
         Asymmetric.generateKeyPair('ECDH')
       ).resolves.toBeDefined()
-      expect(
+      await expect(
         Asymmetric.generateKeyPair('ECDSA')
       ).resolves.toBeDefined()
     })
@@ -18,10 +18,10 @@ describe('Asymmetric', () => {
     it('should work', async () => {
       const bob = await Asymmetric.generateKeyPair('ECDH')
       const alice = await Asymmetric.generateKeyPair('ECDH')
-      expect(
+      await expect(
         Asymmetric.deriveWrappingKey(bob.publicKey, alice.privateKey)
       ).resolves.toBeDefined()
-      expect(
+      await expect(
         Asymmetric.deriveWrappingKey(alice.publicKey, bob.privateKey)
       ).resolves.toBeDefined()
     })
@@ -30,7 +30,7 @@ describe('Asymmetric', () => {
   describe('importPublicKey', () => {
     it('should work', async () => {
       const exportedKey = await exportJwk((await Asymmetric.generateKeyPair('ECDH')).publicKey)
-      expect(
+      await expect(
         Asymmetric.importPublicKey('ECDH', exportedKey)
       ).resolves.toBeDefined()
     })
@@ -40,13 +40,12 @@ describe('Asymmetric', () => {
     it('should work', async () => {
       const { publicKey, privateKey } = await Asymmetric.generateKeyPair('ECDH')
 
-      expect(Asymmetric.calculateKeyThumbprint(publicKey)).resolves.toBeDefined()
-      expect(Asymmetric.calculateKeyThumbprint(privateKey)).resolves.toBeDefined()
+      await expect(Asymmetric.calculateKeyThumbprint(publicKey)).resolves.toBeDefined()
+      await expect(Asymmetric.calculateKeyThumbprint(privateKey)).resolves.toBeDefined()
       expect(isEqual(
         await Asymmetric.calculateKeyThumbprint(publicKey),
-        await Asymmetric.calculateKeyThumbprint(publicKey),
+        await Asymmetric.calculateKeyThumbprint(publicKey)
       )).toBeTruthy()
     })
   })
-
 })

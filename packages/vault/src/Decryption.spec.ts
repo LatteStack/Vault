@@ -1,7 +1,7 @@
-import { Encryption } from "./Encryption";
-import { Decryption } from "./Decryption";
-import { Keychain, PrivateKeychain } from "./Keychain";
-import { randomBytes, randomInt } from "crypto";
+import { Encryption } from './Encryption'
+import { Decryption } from './Decryption'
+import { Keychain, type PrivateKeychain } from './Keychain'
+import { randomBytes, randomInt } from 'crypto'
 
 describe('Decryptor', () => {
   const plaintext = randomBytes(randomInt(100)).toString('hex')
@@ -9,15 +9,15 @@ describe('Decryptor', () => {
   const bobKeychain = Keychain.generate()
   const aliceKeychain = Keychain.generate()
   const ciphertext = Promise.all([bobKeychain, aliceKeychain])
-    .then(([bob, alice]) => {
-      return new Encryption(plaintext)
+    .then(async ([bob, alice]) => {
+      return await new Encryption(plaintext)
         .addRecipient(bob)
         .addRecipient(alice)
         .text()
     })
   const ciphertextBuffer = Promise.all([bobKeychain, aliceKeychain])
-    .then(([bob, alice]) => {
-      return new Encryption(plaintext)
+    .then(async ([bob, alice]) => {
+      return await new Encryption(plaintext)
         .addRecipient(bob)
         .addRecipient(alice)
         .arrayBuffer()
@@ -37,7 +37,7 @@ describe('Decryptor', () => {
             controller.enqueue(buffer)
             controller.close()
           }
-        })),
+        }))
       ].forEach((source) => {
         sources.push([source, keychain])
       })
@@ -54,16 +54,16 @@ describe('Decryptor', () => {
   it('should throw when no recipients', async () => {
     const encryptor = new Decryption(await ciphertext)
     expect(() => encryptor.stream()).toThrow()
-    expect(encryptor.arrayBuffer()).rejects.toThrow()
-    expect(encryptor.text()).rejects.toThrow()
+    await expect(encryptor.arrayBuffer()).rejects.toThrow()
+    await expect(encryptor.text()).rejects.toThrow()
   })
 
   it('should can setRecipient', async () => {
     const encryptor = new Decryption(await ciphertext)
-    expect(Promise.resolve(
+    await expect(Promise.resolve(
       encryptor.setRecipient(await bobKeychain)
     )).resolves.not.toThrow()
-    expect(Promise.resolve(
+    await expect(Promise.resolve(
       encryptor
         .setRecipient(await bobKeychain)
         .setRecipient(await aliceKeychain)

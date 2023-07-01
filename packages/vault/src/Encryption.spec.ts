@@ -1,5 +1,5 @@
-import { Encryption } from "./Encryption";
-import { Keychain } from "./Keychain";
+import { Encryption } from './Encryption'
+import { Keychain } from './Keychain'
 
 describe('Encryptor', () => {
   let bobKeychain: Keychain
@@ -30,11 +30,11 @@ describe('Encryptor', () => {
     expect(encryptor).toBeDefined()
   })
 
-  it('should throw when no recipients', () => {
+  it('should throw when no recipients', async () => {
     const encryptor = new Encryption(plaintext)
     expect(() => encryptor.stream()).toThrow()
-    expect(encryptor.arrayBuffer()).rejects.toThrow()
-    expect(encryptor.text()).rejects.toThrow()
+    await expect(encryptor.arrayBuffer()).rejects.toThrow()
+    await expect(encryptor.text()).rejects.toThrow()
   })
 
   it('should can addRecipient', () => {
@@ -52,7 +52,6 @@ describe('Encryptor', () => {
       })
     })
   })
-
 
   describe('arrayBuffer', () => {
     createSources().forEach((source) => {
@@ -76,5 +75,4 @@ describe('Encryptor', () => {
       })
     })
   })
-
 })

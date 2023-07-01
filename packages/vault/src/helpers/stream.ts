@@ -1,4 +1,4 @@
-export function concatChunks(chunks: ArrayBuffer[], size?: number): Uint8Array {
+export function concatChunks (chunks: ArrayBuffer[], size?: number): Uint8Array {
   const bufferSize = size ?? chunks.reduce((acc, chunk) => (acc + chunk.byteLength), 0)
   const uint8Array = new Uint8Array(bufferSize)
   let offset = 0
@@ -13,20 +13,22 @@ export function concatChunks(chunks: ArrayBuffer[], size?: number): Uint8Array {
   return uint8Array
 }
 
-async function* streamAsyncIterable(stream: ReadableStream<Uint8Array>) {
-  const reader = stream.getReader();
+async function * streamAsyncIterable (
+  stream: ReadableStream<Uint8Array>
+): AsyncGenerator<Uint8Array> {
+  const reader = stream.getReader()
   try {
     while (true) {
-      const { done, value } = await reader.read();
-      if (done) return;
-      yield value;
+      const { done, value } = await reader.read()
+      if (done) return
+      yield value
     }
   } finally {
-    reader.releaseLock();
+    reader.releaseLock()
   }
 }
 
-export async function readAllChunks(
+export async function readAllChunks (
   stream: ReadableStream<Uint8Array>
 ): Promise<Uint8Array> {
   const buffered: Uint8Array[] = []
