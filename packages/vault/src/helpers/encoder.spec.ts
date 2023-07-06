@@ -9,7 +9,7 @@ import {
   objectToBase64Url,
   base64UrlToObject,
   uint32ToBuffer,
-  bufferToUint32
+  bufferToUint32,
 } from './encoder'
 import { Buffer } from 'buffer'
 import { isEqual } from 'lodash'
@@ -27,7 +27,7 @@ describe('encoder', () => {
       expect(textToBuffer(text)).toBeInstanceOf(Uint8Array)
       expect(isEqual(
         textToBuffer(text),
-        new Uint8Array(Buffer.from(text))
+        new Uint8Array(Buffer.from(text)),
       )).toBeTruthy()
     })
   })
@@ -56,7 +56,7 @@ describe('encoder', () => {
       expect(uint32ToBuffer(4294967295)).toBeInstanceOf(Uint8Array)
       expect(isEqual(
         base64UrlToBuffer(Buffer.from(buffer).toString('base64url')),
-        buffer
+        buffer,
       )).toBeTruthy()
     })
   })
@@ -67,7 +67,7 @@ describe('encoder', () => {
       expect(objectToBuffer(obj)).toBeInstanceOf(Uint8Array)
       expect(isEqual(
         objectToBuffer(obj),
-        new Uint8Array(Buffer.from(JSON.stringify(obj), 'utf-8'))
+        new Uint8Array(Buffer.from(JSON.stringify(obj), 'utf-8')),
       ))
     })
   })
@@ -77,7 +77,7 @@ describe('encoder', () => {
       const obj = { x: 'y' }
 
       expect(bufferToObject(
-        new Uint8Array(Buffer.from(JSON.stringify(obj), 'utf-8'))
+        new Uint8Array(Buffer.from(JSON.stringify(obj), 'utf-8')),
       )).toEqual(obj)
     })
   })
@@ -87,7 +87,7 @@ describe('encoder', () => {
       const obj = { x: 'y' }
 
       expect(objectToBase64Url(obj)).toBe(
-        Buffer.from(JSON.stringify(obj), 'utf-8').toString('base64url')
+        Buffer.from(JSON.stringify(obj), 'utf-8').toString('base64url'),
       )
     })
   })
@@ -106,7 +106,7 @@ describe('encoder', () => {
       expect(uint32ToBuffer(4294967295)).toBeInstanceOf(Uint8Array)
       expect(isEqual(
         uint32ToBuffer(4294967295),
-        new Uint8Array([255, 255, 255, 255])
+        new Uint8Array([255, 255, 255, 255]),
       )).toBeTruthy()
     })
   })

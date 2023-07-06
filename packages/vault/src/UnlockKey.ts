@@ -10,14 +10,14 @@ export class UnlockKey {
       keyMaterial,
       { name: 'AES-GCM', length: 256 },
       false,
-      ['wrapKey', 'unwrapKey']
+      ['wrapKey', 'unwrapKey'],
     )
   }
 
   static async deriveUnlockKeyFromPassword (
     password: string,
     salt: string,
-    iterations: number
+    iterations: number,
   ): Promise<CryptoKey> {
     const options = await z.object({
       password: z.string()
@@ -27,11 +27,11 @@ export class UnlockKey {
         .trim()
         .transform((value) => textToBuffer(value)),
       iterations: z.number()
-        .int()
+        .int(),
     }).parseAsync({
       password,
       salt,
-      iterations
+      iterations,
     })
 
     const keyMaterial = await crypto.subtle.importKey(
@@ -39,7 +39,7 @@ export class UnlockKey {
       options.password,
       'PBKDF2',
       false,
-      ['deriveBits', 'deriveKey']
+      ['deriveBits', 'deriveKey'],
     )
 
     return await crypto.subtle.deriveKey(
@@ -47,12 +47,12 @@ export class UnlockKey {
         salt: options.salt,
         iterations: options.iterations,
         name: 'PBKDF2',
-        hash: 'SHA-256'
+        hash: 'SHA-256',
       },
       keyMaterial,
       { name: 'AES-GCM', length: 256 },
       false,
-      ['wrapKey', 'unwrapKey']
+      ['wrapKey', 'unwrapKey'],
     )
   }
 }

@@ -2,82 +2,115 @@ import { Asymmetric } from '../Asymmetric'
 import { DEFAULT_CHUNK_SIZE } from '../constants'
 import {
   exportJwk, generateHmacKeyFromBuffer, HMAC, objectToBuffer,
-  uint32ToBuffer, withEquallySized
+  uint32ToBuffer,
 } from '../helpers'
+import { type BlobLike } from '../platform'
+import { type Recipient } from '../Recipient'
 import { Symmetric } from '../Symmetric'
-import { type ExportedPackageHeader } from '../types'
 
-async function initialize (recipients: CryptoKey[]): Promise<{
-  header: Uint8Array
+interface Header {
+  size: number
+  contentPublicKey: JsonWebKey
+  recipients: Record<string, string>
+}
+
+class EncryptionStream extends ReadableStream<Uint8Array> {}
+
+interface Metadata {
+  buffer: Uint8Array
   hamcKey: CryptoKey
   symmetric: Symmetric
-}> {
+}
+
+async function createMetadata (
+  source: BlobLike,
+  recipients: Recipient[],
+): Promise<Metadata> {
   const [
     contentEncryptionKey,
-    { publicKey: contentPublicKey, privateKey: contentPrivateKey }
+    { publicKey: contentPublicKey, privateKey: contentPrivateKey },
   ] = await Promise.all([
     Symmetric.generateEncryptionKey(),
-    Asymmetric.generateKeyPair('ECDH')
+    Asymmetric.generateKeyPair('ECDH'),
   ])
 
-  const header = objectToBuffer<ExportedPackageHeader>({
+  const buffer = objectToBuffer<Header>({
+    size: source.size,
     contentPublicKey: await exportJwk(contentPublicKey),
     recipients: Object.fromEntries(
       await Promise.all<[string, string]>(
-        recipients.map(async (recipientPublicKey) => {
+        recipients.map(async (recipient) => {
           const wrappingKey = await Asymmetric.deriveWrappingKey(
-            recipientPublicKey,
-            contentPrivateKey
+            recipient.ECDH.publicKey,
+            contentPrivateKey,
           )
 
           return await Promise.all([
-            Asymmetric.calculateKeyThumbprint(recipientPublicKey),
-            Symmetric.wrapKey(contentEncryptionKey, wrappingKey)
+            Asymmetric.calculateKeyThumbprint(recipient.ECDH.publicKey),
+            Symmetric.wrapKey(contentEncryptionKey, wrappingKey),
           ])
-        })
-      )
-    )
+        }),
+      ),
+    ),
   })
 
-  const hamcKey = await generateHmacKeyFromBuffer(header)
+  const hamcKey = await generateHmacKeyFromBuffer(buffer)
   const symmetric = new Symmetric(contentEncryptionKey)
 
   return {
-    header,
+    buffer,
     hamcKey,
-    symmetric
+    symmetric,
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
-export class EncryptionStream {
-  static create (recipients: CryptoKey[]): TransformStream<Uint8Array, Uint8Array> {
-    let counter = 0
-    const initial = initialize(recipients)
+export function createEncryptionStream (
+  source: BlobLike,
+  recipients: Array<Recipient | Promise<Recipient>>,
+): EncryptionStream {
+  let metadata: Metadata
+  let encryptedBytes = 0
 
-    return new TransformStream<Uint8Array, Uint8Array>(withEquallySized({
-      chunkSize: DEFAULT_CHUNK_SIZE,
-      start: async (controller) => {
+  return new ReadableStream<[BlobLike, number]>({
+    start (controller) {
+      for (let counter = 0; counter < Math.floor(source.size / DEFAULT_CHUNK_SIZE); counter++) {
+        const start = DEFAULT_CHUNK_SIZE * counter
+        const end = DEFAULT_CHUNK_SIZE * (counter + 1)
+        const data = source.slice(start, end > source.size ? source.size : end)
+        controller.enqueue([data, counter])
+      }
+    },
+  })
+    .pipeThrough(new TransformStream<[BlobLike, number], Uint8Array>({
+      async start (controller) {
         try {
-          const { header } = await initial
-          controller.enqueue(uint32ToBuffer(header.byteLength))
-          controller.enqueue(header)
+          metadata = await createMetadata(source, await Promise.all(recipients))
+          controller.enqueue(uint32ToBuffer(metadata.buffer.byteLength))
+          controller.enqueue(metadata.buffer)
         } catch (error) {
           controller.error(error)
         }
       },
-      transform: async (chunk, controller) => {
+      async transform ([data, counter], controller) {
         try {
-          const { symmetric, hamcKey } = await initial
-          const additionalData = await HMAC(hamcKey, uint32ToBuffer(counter))
-          const ciphertext = await symmetric.encrypt(chunk, additionalData)
+          const [plaintext, additionalData] = await Promise.all([
+            data.arrayBuffer(),
+            HMAC(metadata.hamcKey, uint32ToBuffer(counter)),
+          ])
 
+          const { iv, ciphertext } = await metadata.symmetric.encrypt(plaintext, additionalData)
+
+          controller.enqueue(iv)
           controller.enqueue(ciphertext)
-          counter += 1
+          encryptedBytes += data.size
         } catch (error) {
           controller.error(error)
         }
-      }
+      },
+      async flush (controller) {
+        if (encryptedBytes !== source.size) {
+          controller.error('The actual size of source does not match the expected size.')
+        }
+      },
     }))
-  }
 }

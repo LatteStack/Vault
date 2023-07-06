@@ -5,7 +5,7 @@ import { bufferToBase64Url, normalizeText, objectToBase64Url, textToBuffer } fro
 
 export async function exportKey (key: CryptoKey): Promise<string> {
   return objectToBase64Url(
-    await crypto.subtle.exportKey('jwk', key)
+    await crypto.subtle.exportKey('jwk', key),
   )
 }
 
@@ -13,12 +13,12 @@ export async function exportJwk (key: CryptoKey): Promise<JsonWebKey> {
   return await crypto.subtle.exportKey('jwk', key)
 }
 
-export function extractIvAndCiphertext (data: Uint8Array): [Uint8Array, Uint8Array] {
+export function extractIvAndCiphertext (data: ArrayBufferLike): [Uint8Array, Uint8Array] {
   const uint8Array = new Uint8Array(data)
 
   return [
     uint8Array.subarray(0, AES_IV_LENGTH_IN_BYTES),
-    uint8Array.subarray(AES_IV_LENGTH_IN_BYTES, data.byteLength)
+    uint8Array.subarray(AES_IV_LENGTH_IN_BYTES, data.byteLength),
   ]
 }
 
@@ -26,8 +26,8 @@ export async function digest (data: BufferSource): Promise<Uint8Array> {
   return new Uint8Array(
     await crypto.subtle.digest(
       { name: 'SHA-256' },
-      data
-    )
+      data,
+    ),
   )
 }
 
@@ -38,7 +38,7 @@ export async function generateHmacKeyFromBuffer (keyMaterial: BufferSource): Pro
     keyData,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['sign', 'verify']
+    ['sign', 'verify'],
   )
 }
 
@@ -46,7 +46,7 @@ export async function HMAC (key: CryptoKey, data: BufferSource): Promise<ArrayBu
   return await crypto.subtle.sign(
     { name: 'HMAC' },
     key,
-    data
+    data,
   )
 }
 
@@ -71,13 +71,13 @@ export async function deriveUnlockKeyFromSecret (secret: string): Promise<Crypto
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
-    ['wrapKey', 'unwrapKey']
+    ['wrapKey', 'unwrapKey'],
   )
 }
 
 export async function generateUnlockKey (): Promise<string> {
   return await exportKey(
-    await Symmetric.generateWrappingKey()
+    await Symmetric.generateWrappingKey(),
   )
 }
 
@@ -96,7 +96,7 @@ export async function deriveUnlockKeyFromPassword (options: {
       .nullish(),
     iterations: z.number()
       .int()
-      .default(10_0000)
+      .default(10_0000),
   }).parseAsync(options)
 
   const keyMaterial = await crypto.subtle.importKey(
@@ -104,7 +104,7 @@ export async function deriveUnlockKeyFromPassword (options: {
     passphrase,
     'PBKDF2',
     false,
-    ['deriveBits', 'deriveKey']
+    ['deriveBits', 'deriveKey'],
   )
 
   return await crypto.subtle.deriveKey(
@@ -112,11 +112,11 @@ export async function deriveUnlockKeyFromPassword (options: {
       salt: salt ?? passphrase,
       iterations,
       name: 'PBKDF2',
-      hash: 'SHA-256'
+      hash: 'SHA-256',
     },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
-    ['wrapKey', 'unwrapKey']
+    ['wrapKey', 'unwrapKey'],
   )
 }

@@ -8,7 +8,7 @@ describe('stream', () => {
       const buffer2 = new Uint8Array([3, 4])
       const buffer = concatChunks([
         buffer1,
-        buffer2
+        buffer2,
       ])
 
       expect(buffer).toBeInstanceOf(Uint8Array)
@@ -24,15 +24,15 @@ describe('stream', () => {
           controller.enqueue(new Uint8Array([2]))
           await Promise.resolve(
             // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-            controller.enqueue(new Uint8Array([3]))
+            controller.enqueue(new Uint8Array([3])),
           )
           controller.close()
-        }
+        },
       }))
 
       expect(isEqual(
         buffer,
-        new Uint8Array([1, 2, 3])
+        new Uint8Array([1, 2, 3]),
       )).toBeTruthy()
     })
   })

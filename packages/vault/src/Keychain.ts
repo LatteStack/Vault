@@ -2,7 +2,7 @@ import { z } from 'zod'
 import {
   base64UrlToObject,
   exportJwk,
-  objectToBase64Url
+  objectToBase64Url,
 } from './helpers'
 import { Asymmetric } from './Asymmetric'
 import { Symmetric } from './Symmetric'
@@ -17,7 +17,7 @@ interface ExportedKeychain<Type extends 'Public' | 'Private'> {
 }
 
 function makeImportPublicKeySchema (
-  algorithmName: 'ECDSA' | 'ECDH'
+  algorithmName: 'ECDSA' | 'ECDH',
 ): z.ZodType<CryptoKey, z.ZodTypeDef, JsonWebKey> {
   return z
     .custom<JsonWebKey>((exportedKey) => typeof exportedKey === 'object')
@@ -28,13 +28,13 @@ function makeImportPublicKeySchema (
 
 function makeImportPrivateKeySchema (
   algorithmName: 'ECDSA' | 'ECDH',
-  unlockKey: CryptoKey
+  unlockKey: CryptoKey,
 ): z.ZodEffects<z.ZodString, CryptoKey, string> {
   return z.string().transform<CryptoKey>(async (wrappedPrivateKey: string) => {
     return await Symmetric.unwrapPrivateKey(
       algorithmName,
       wrappedPrivateKey,
-      unlockKey
+      unlockKey,
     )
   })
 }
@@ -49,7 +49,7 @@ export abstract class Keychain {
   static async generate (): Promise<PrivateKeychain> {
     const [ECDSA, ECDH] = await Promise.all([
       Asymmetric.generateKeyPair('ECDSA'),
-      Asymmetric.generateKeyPair('ECDH')
+      Asymmetric.generateKeyPair('ECDH'),
     ])
 
     return new PrivateKeychain({ ECDSA, ECDH })
@@ -57,7 +57,7 @@ export abstract class Keychain {
 
   static async fromPrivate (
     exportedPrivateKeychain: string,
-    unlockKey: CryptoKey
+    unlockKey: CryptoKey,
   ): Promise<PrivateKeychain> {
     return await PrivateKeychain.import(exportedPrivateKeychain, unlockKey)
   }
@@ -102,39 +102,39 @@ export class PrivateKeychain extends Keychain {
   async exportPublic (): Promise<string> {
     return objectToBase64Url<ExportedKeychain<'Public'>>({
       ECDSA: {
-        publicKey: await exportJwk(this.#ECDSA.publicKey)
+        publicKey: await exportJwk(this.#ECDSA.publicKey),
       },
       ECDH: {
-        publicKey: await exportJwk(this.#ECDH.publicKey)
-      }
+        publicKey: await exportJwk(this.#ECDH.publicKey),
+      },
     })
   }
 
   static async import (
     exportedPrivateKeychain: string,
-    unlockKey: CryptoKey
+    unlockKey: CryptoKey,
   ): Promise<PrivateKeychain> {
     const exportedKeychain = base64UrlToObject(exportedPrivateKeychain)
     const { ECDSA, ECDH } = await z.object({
       ECDSA: z.object({
         publicKey: makeImportPublicKeySchema('ECDSA'),
-        wrappedPrivateKey: makeImportPrivateKeySchema('ECDSA', unlockKey)
+        wrappedPrivateKey: makeImportPrivateKeySchema('ECDSA', unlockKey),
       }),
       ECDH: z.object({
         publicKey: makeImportPublicKeySchema('ECDH'),
-        wrappedPrivateKey: makeImportPrivateKeySchema('ECDH', unlockKey)
-      })
+        wrappedPrivateKey: makeImportPrivateKeySchema('ECDH', unlockKey),
+      }),
     }).parseAsync(exportedKeychain)
 
     return new PrivateKeychain({
       ECDSA: {
         publicKey: ECDSA.publicKey,
-        privateKey: ECDSA.wrappedPrivateKey
+        privateKey: ECDSA.wrappedPrivateKey,
       },
       ECDH: {
         publicKey: ECDH.publicKey,
-        privateKey: ECDH.wrappedPrivateKey
-      }
+        privateKey: ECDH.wrappedPrivateKey,
+      },
     })
   }
 
@@ -142,12 +142,12 @@ export class PrivateKeychain extends Keychain {
     const exported: ExportedKeychain<'Private'> = {
       ECDSA: {
         publicKey: await exportJwk(this.#ECDSA.publicKey),
-        wrappedPrivateKey: await Symmetric.wrapKey(this.#ECDSA.privateKey, key, 'jwk')
+        wrappedPrivateKey: await Symmetric.wrapKey(this.#ECDSA.privateKey, key, 'jwk'),
       },
       ECDH: {
         publicKey: await exportJwk(this.#ECDH.publicKey),
-        wrappedPrivateKey: await Symmetric.wrapKey(this.#ECDH.privateKey, key, 'jwk')
-      }
+        wrappedPrivateKey: await Symmetric.wrapKey(this.#ECDH.privateKey, key, 'jwk'),
+      },
     }
 
     return objectToBase64Url(exported)
@@ -193,11 +193,11 @@ export class PublicKeychain extends Keychain {
   async export (): Promise<string> {
     return objectToBase64Url<ExportedKeychain<'Public'>>({
       ECDSA: {
-        publicKey: await exportJwk(this.#ECDSA.publicKey)
+        publicKey: await exportJwk(this.#ECDSA.publicKey),
       },
       ECDH: {
-        publicKey: await exportJwk(this.#ECDH.publicKey)
-      }
+        publicKey: await exportJwk(this.#ECDH.publicKey),
+      },
     })
   }
 
@@ -205,27 +205,27 @@ export class PublicKeychain extends Keychain {
     const wrappedPrivateKeySchema = z.never({
       invalid_type_error: [
         'Keychain.fromPublic cannot be used to import private keychains',
-        'Please use Keychain.fromPrivate instead.'
-      ].join('\n')
+        'Please use Keychain.fromPrivate instead.',
+      ].join('\n'),
     }).nullish()
 
     const { ECDSA, ECDH } = await z.object({
       ECDSA: z.object({
         publicKey: makeImportPublicKeySchema('ECDSA'),
-        wrappedPrivateKey: wrappedPrivateKeySchema
+        wrappedPrivateKey: wrappedPrivateKeySchema,
       }),
       ECDH: z.object({
         publicKey: makeImportPublicKeySchema('ECDH'),
-        wrappedPrivateKey: wrappedPrivateKeySchema
-      })
+        wrappedPrivateKey: wrappedPrivateKeySchema,
+      }),
     }).parseAsync(
-      base64UrlToObject(exportedPublicKeychain)
+      base64UrlToObject(exportedPublicKeychain),
     )
 
     return new PublicKeychain({
       ECDSA,
       ECDH,
-      exported: exportedPublicKeychain
+      exported: exportedPublicKeychain,
     })
   }
 }

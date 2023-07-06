@@ -1,41 +1,46 @@
-import { InvalidRecipientException } from './Exception'
+import './compatible'
+import { InvalidCipherextException, InvalidRecipientException } from './Exception'
 import { base64UrlToBuffer, bufferToText, readAllChunks } from './helpers'
-import { PrivateKeychain } from './Keychain'
-import { DecryptionStream } from './streams'
+import { type BlobLike, isBuffer, isBlobLike } from './platform'
+import { Recipient } from './Recipient'
+import { createDecryptionStream } from './streams'
 
 export class Decryption {
-  private readonly source: ReadableStream<Uint8Array>
+  private readonly source: BlobLike
 
-  private recipientKeyPair?: CryptoKeyPair
+  private recipient?: Recipient
 
-  constructor (source: BodyInit) {
-    const response = new Response(
-      typeof source === 'string' ? base64UrlToBuffer(source) : source
-    )
-
-    if (response.body == null) {
-      throw new Error('Invalid source.')
+  constructor (ciphertext: string | ArrayBuffer | BlobLike) {
+    if (isBlobLike(ciphertext)) {
+      this.source = ciphertext
     }
 
-    this.source = response.body
+    if (isBuffer(ciphertext)) {
+      this.source = new Blob([ciphertext])
+    }
+
+    if (typeof ciphertext === 'string') {
+      this.source = new Blob([base64UrlToBuffer(ciphertext)])
+    }
+
+    throw new InvalidCipherextException()
   }
 
-  setRecipient (recipient: PrivateKeychain): this {
-    if (!(recipient instanceof PrivateKeychain)) {
-      throw new InvalidRecipientException('Recipient must be instanceof PrivateKeychain')
+  setRecipient (recipient: Recipient): this {
+    if (!(recipient instanceof Recipient)) {
+      throw new InvalidRecipientException()
     }
 
-    this.recipientKeyPair = recipient.getKeyPair('ECDH')
+    this.recipient = recipient
     return this
   }
 
   stream (): ReadableStream<Uint8Array> {
-    if (this.recipientKeyPair == null) {
-      throw new Error('Please call setRecipient first to set the recipient.')
+    if (this.recipient == null) {
+      throw new Error('The recipient must be set.')
     }
 
-    return this.source
-      .pipeThrough(DecryptionStream.create(this.recipientKeyPair))
+    return createDecryptionStream(this.source, this.recipient)
   }
 
   async arrayBuffer (): Promise<ArrayBuffer> {
@@ -44,7 +49,7 @@ export class Decryption {
 
   async text (): Promise<string> {
     return bufferToText(
-      await this.arrayBuffer()
+      await this.arrayBuffer(),
     )
   }
 }

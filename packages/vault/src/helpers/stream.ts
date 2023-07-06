@@ -14,7 +14,7 @@ export function concatChunks (chunks: ArrayBuffer[], size?: number): Uint8Array 
 }
 
 async function * streamAsyncIterable (
-  stream: ReadableStream<Uint8Array>
+  stream: ReadableStream<Uint8Array>,
 ): AsyncGenerator<Uint8Array> {
   const reader = stream.getReader()
   try {
@@ -29,7 +29,7 @@ async function * streamAsyncIterable (
 }
 
 export async function readAllChunks (
-  stream: ReadableStream<Uint8Array>
+  stream: ReadableStream<Uint8Array>,
 ): Promise<Uint8Array> {
   const buffered: Uint8Array[] = []
 

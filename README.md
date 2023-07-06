@@ -15,7 +15,7 @@ import { Recipient, Encryption, Decryption } from '@lattestack/vault'
 const plaintext = 'CONFIDENTIAL_DATA'
 
 // Generate a Recipient representing Alice.
-const alice = await Recipient.generete()
+const alice = await Recipient.generate()
 
 // Add Alice as a recipient,
 // then encrypt the plaintext and outputs as text.
@@ -91,7 +91,7 @@ When encrypting, you always need to add one or more recipients. Only the recipie
 * `publicKey: string`  
   The publicKey property, which does not contain any confidential information, can be openly shared. It can be passed as an argument to the *Encryption.addRecipient* function to encrypt data, but it cannot be used to decrypt data.
 
-* `static generete(): Promise<Recipient>`  
+* `static generate(): Promise<Recipient>`  
   Generete a new Recipient. You need to associate the recipient with a specific user on your own.
 
 * `static export(recipient: Recipient, unlockKey: UnlockKey): Promise<string>`  
@@ -140,9 +140,9 @@ The `UnlockKey` interface is used to protect the exported recipient from being s
   import { Recipient } from '@lattestack/vault'
 
   // Generate a recipient representing Alice.
-  const alice = await Recipient.generete()
+  const alice = await Recipient.generate()
   // Generate a recipient representing Bob.
-  const bob = await Recipient.generete()
+  const bob = await Recipient.generate()
   ```
 
 * **Export and persist recipient to storage**
@@ -155,7 +155,7 @@ The `UnlockKey` interface is used to protect the exported recipient from being s
   const unlockKey = await UnlockKey.fromSecret(secret)
   
   // Generate a recipient representing Alice.
-  const alice = await Recipient.generete()
+  const alice = await Recipient.generate()
   // Export recipient(Alice) with unlockKey
   const exportedAlice = Recipient.export(alice, unlockKey)
 
@@ -176,7 +176,7 @@ The `UnlockKey` interface is used to protect the exported recipient from being s
   // Import recipient(Alice) with unlockKey
   const alice = await Recipient.import(exportedAlice, unlockKey)
   ```
-
+<!-- 
 * **Derives unlockKey from the password provided by user**
 
   ```javascript
@@ -193,7 +193,7 @@ The `UnlockKey` interface is used to protect the exported recipient from being s
     salt,
     iterations
   )
-  ```
+  ``` -->
 
 * **Encrypt text data**
 
@@ -267,7 +267,56 @@ The `UnlockKey` interface is used to protect the exported recipient from being s
 
 ## How It Works
 
-TODO
+### Recipient
+
+Each Recipient holds the following information:
+
+* `ECDH` (Elliptic Curve Diffie-Hellman) keyPair.
+* `ECDSA` (Elliptic Curve Digital Signature Algorithm) keyPair.
+
+### Encryption
+
+All encrypted output is essentially binary data in the following format:
+
+```
+| headerSize: UInt32 | header: String | ...chunks: Bytes |
+```
+
+* Generate the content ECDH key pair `CPri` and `CPub`
+* Store `CPub` in `header`
+* Generate the content encryption key `CEK`
+* For each recipient:
+  * Let `RPub` be the recipient's public key
+  * Calculate thumbprint `RPubT = thumbprint(RPub)`
+  * Derive `KEK = deriveKey(CPri, RPub)`
+  * Wrap content encryption key `WCEK = wrapKey(CEK, KEK)`
+  * Store `RPubT`, `WCEK` as key-value in `header`.
+* Split plaintext into equally-sized blocks. For each block:
+  * Let `p` be the block
+  * Let `n` be the block ordinal
+  * Calculate additional data `a = sha256(header + n)`
+  * Generate random initialization vector `iv`
+  * Generate ciphertext `c = aes_encrypt(CEK, p, iv, a)`
+  * Store `iv` and `c` in the `chunk`
+
+## Decryption
+
+* Parse `header` from encrypted output
+* Retrieve `CPub` from `header`
+* Let `RPub` be the recipient's public key
+* Calculate thumbprint `RPubT = thumbprint(RPub)`
+* Retrieve `WCEK` by `RPubT` from `header`
+* Let `RPri` be the recipient's private key
+* Derive `KEK = deriveKey(RPri, CPub)`
+* Unwrap content encryption key `CEK = unwrapKey(WCEK, KEK)`
+* Split rest encrypted output into equally-sized blocks. For each block:
+  * let `chunk` be the block
+  * Let `n` be the block ordinal
+  * Calculate additional data `a = sha256(header + n)`
+  * Retrieve initialization vector `iv` from `chunk`
+  * Retrieve ciphertext `c` from `chunk`
+  * Generate plaintext `p = aes_decrypt(CEK, c, iv, a)`
+
 
 ## License
 

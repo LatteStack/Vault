@@ -2,7 +2,7 @@
 import {
   Keychain,
   PrivateKeychain,
-  PublicKeychain
+  PublicKeychain,
 } from './Keychain'
 import { Symmetric } from './Symmetric'
 

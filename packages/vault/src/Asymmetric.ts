@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import {
-  AES_KEY_LENGTH_IN_BITS
+  AES_KEY_LENGTH_IN_BITS,
 } from './constants'
 import { bufferToBase64Url, digest, textToBuffer } from './helpers'
 
@@ -8,12 +8,12 @@ import { bufferToBase64Url, digest, textToBuffer } from './helpers'
 export class Asymmetric {
   static async deriveWrappingKey (
     publicKey: CryptoKey,
-    privateKey: CryptoKey
+    privateKey: CryptoKey,
   ): Promise<CryptoKey> {
     const sharedSecret = await crypto.subtle.deriveBits(
       { public: publicKey, name: 'ECDH' },
       privateKey,
-      AES_KEY_LENGTH_IN_BITS
+      AES_KEY_LENGTH_IN_BITS,
     )
 
     /**
@@ -32,20 +32,20 @@ export class Asymmetric {
       keyMaterial,
       { name: 'AES-GCM', length: AES_KEY_LENGTH_IN_BITS },
       true,
-      ['wrapKey', 'unwrapKey']
+      ['wrapKey', 'unwrapKey'],
     )
   }
 
   static async importPublicKey (
     algorithmName: 'ECDSA' | 'ECDH',
-    keyData: JsonWebKey
+    keyData: JsonWebKey,
   ): Promise<CryptoKey> {
     return await crypto.subtle.importKey(
       'jwk',
       keyData,
       { name: algorithmName, namedCurve: 'P-256' },
       true,
-      algorithmName === 'ECDSA' ? ['verify'] : []
+      algorithmName === 'ECDSA' ? ['verify'] : [],
     )
   }
 
@@ -54,10 +54,10 @@ export class Asymmetric {
       return await crypto.subtle.generateKey(
         {
           name: 'ECDSA',
-          namedCurve: 'P-256'
+          namedCurve: 'P-256',
         },
         true,
-        ['sign', 'verify']
+        ['sign', 'verify'],
       )
     }
 
@@ -65,10 +65,10 @@ export class Asymmetric {
       return await crypto.subtle.generateKey(
         {
           name: 'ECDH',
-          namedCurve: 'P-256'
+          namedCurve: 'P-256',
         },
         true,
-        ['deriveKey', 'deriveBits']
+        ['deriveKey', 'deriveBits'],
       )
     }
 
@@ -81,15 +81,15 @@ export class Asymmetric {
       crv: z.string(),
       kty: z.string(),
       x: z.string(),
-      y: z.string()
+      y: z.string(),
     }).parse(jwk)
 
     const thumbprint = await digest(
       textToBuffer(
         // Members MUST remain in lexicographical order to generate the same thumbprint.
         // See: https://datatracker.ietf.org/doc/html/rfc7638#section-3.2
-        JSON.stringify({ crv, kty, x, y })
-      )
+        JSON.stringify({ crv, kty, x, y }),
+      ),
     )
 
     return bufferToBase64Url(thumbprint)

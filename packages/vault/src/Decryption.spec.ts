@@ -36,8 +36,8 @@ describe('Decryptor', () => {
           start: (controller) => {
             controller.enqueue(buffer)
             controller.close()
-          }
-        }))
+          },
+        })),
       ].forEach((source) => {
         sources.push([source, keychain])
       })
@@ -61,12 +61,12 @@ describe('Decryptor', () => {
   it('should can setRecipient', async () => {
     const encryptor = new Decryption(await ciphertext)
     await expect(Promise.resolve(
-      encryptor.setRecipient(await bobKeychain)
+      encryptor.setRecipient(await bobKeychain),
     )).resolves.not.toThrow()
     await expect(Promise.resolve(
       encryptor
         .setRecipient(await bobKeychain)
-        .setRecipient(await aliceKeychain)
+        .setRecipient(await aliceKeychain),
     )).resolves.not.toThrow()
   })
 
@@ -75,7 +75,7 @@ describe('Decryptor', () => {
     await expect(
       new Decryption(invalidSource)
         .setRecipient(await bobKeychain)
-        .text()
+        .text(),
     ).rejects.toBeDefined()
   })
 
@@ -84,7 +84,7 @@ describe('Decryptor', () => {
     await expect(
       new Decryption(invalidSource)
         .setRecipient(await bobKeychain)
-        .arrayBuffer()
+        .arrayBuffer(),
     ).rejects.toBeDefined()
   })
 
@@ -96,7 +96,7 @@ describe('Decryptor', () => {
       expect(stream).toBeInstanceOf(ReadableStream)
       const write = jest.fn()
       await expect(
-        stream.pipeTo(new WritableStream({ write }))
+        stream.pipeTo(new WritableStream({ write })),
       ).resolves.not.toThrow()
       expect(write).toHaveBeenCalled()
     })

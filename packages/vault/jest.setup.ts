@@ -8,4 +8,4 @@ globalThis.crypto ??= require('crypto').webcrypto
 globalThis.Blob ??= require('buffer').Blob
 
 /** Node.js version is between 16.5.0   and 18.0.0 */
-globalThis.ReadableStream ?? require('stream/web')
+// globalThis.ReadableStream ?? require('stream/web')

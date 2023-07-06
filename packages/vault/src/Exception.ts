@@ -9,6 +9,14 @@ class Exception extends Error {
   }
 }
 
+export class InvalidPlaintextException extends Exception {
+
+}
+
+export class InvalidCipherextException extends Exception {
+
+}
+
 export class InvalidRecipientException extends Exception {
 
 }

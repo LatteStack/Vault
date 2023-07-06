@@ -11,18 +11,18 @@ describe('withEquallySized', () => {
       start (controller) {
         controller.enqueue(buffer)
         controller.close()
-      }
+      },
     })
       .pipeThrough(new TransformStream(withEquallySized({
         chunkSize,
-        transform: fn
+        transform: fn,
       })))
       .pipeTo(new WritableStream({ write: noop }))
 
     expect(fn).toBeCalledTimes(1)
     expect(isEqual(
       new Uint8Array(Buffer.concat(chunks)),
-      buffer
+      buffer,
     )).toBeTruthy()
   })
 
@@ -35,18 +35,18 @@ describe('withEquallySized', () => {
       start (controller) {
         controller.enqueue(buffer)
         controller.close()
-      }
+      },
     })
       .pipeThrough(new TransformStream(withEquallySized({
         chunkSize,
-        transform: fn
+        transform: fn,
       })))
       .pipeTo(new WritableStream({ write: noop }))
 
     expect(fn).toBeCalledTimes(1)
     expect(isEqual(
       new Uint8Array(Buffer.concat(chunks)),
-      buffer
+      buffer,
     )).toBeTruthy()
   })
 
@@ -59,18 +59,18 @@ describe('withEquallySized', () => {
       start (controller) {
         controller.enqueue(buffer)
         controller.close()
-      }
+      },
     })
       .pipeThrough(new TransformStream(withEquallySized({
         chunkSize,
-        transform: fn
+        transform: fn,
       })))
       .pipeTo(new WritableStream({ write: noop }))
 
     expect(fn).toBeCalledTimes(2)
     expect(isEqual(
       new Uint8Array(Buffer.concat(chunks)),
-      buffer
+      buffer,
     )).toBeTruthy()
   })
 
@@ -83,21 +83,21 @@ describe('withEquallySized', () => {
       start (controller) {
         controller.enqueue(buffer)
         controller.close()
-      }
+      },
     })
       .pipeThrough(new TransformStream(withEquallySized({
         chunkSize,
         transform: fn,
         resizeChunk: () => {
           return new Uint8Array([3, 4, 5])
-        }
+        },
       })))
       .pipeTo(new WritableStream({ write: noop }))
 
     expect(fn).toBeCalledTimes(2)
     expect(isEqual(
       new Uint8Array(Buffer.concat(chunks)),
-      new Uint8Array([3, 4, 5])
+      new Uint8Array([3, 4, 5]),
     )).toBeTruthy()
   })
 })

@@ -29,7 +29,7 @@ export function withEquallySized (options: Transformer<Uint8Array, Uint8Array> &
           if (options.transform != null) {
             await options.transform(
               buffer.subarray(offset, offset + options.chunkSize),
-              controller
+              controller,
             )
           }
 
@@ -45,7 +45,7 @@ export function withEquallySized (options: Transformer<Uint8Array, Uint8Array> &
         if (options.transform != null) {
           await options.transform(
             concatChunks(buffered, bufferedBytes),
-            controller
+            controller,
           )
         }
       }
@@ -53,6 +53,6 @@ export function withEquallySized (options: Transformer<Uint8Array, Uint8Array> &
       if (options.flush != null) {
         await options.flush(controller)
       }
-    }
+    },
   }
 }

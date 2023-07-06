@@ -1,124 +1,115 @@
 import { Asymmetric } from '../Asymmetric'
 import { AES_TAG_LENGTH_IN_BYTES, DEFAULT_CHUNK_SIZE, AES_IV_LENGTH_IN_BYTES } from '../constants'
-import { bufferToObject, bufferToUint32, concatChunks, generateHmacKeyFromBuffer, HMAC, uint32ToBuffer, withEquallySized } from '../helpers'
+import { InvalidRecipientException } from '../Exception'
+import { bufferToObject, bufferToUint32, generateHmacKeyFromBuffer, HMAC, uint32ToBuffer } from '../helpers'
+import { type BlobLike } from '../platform'
+import { type Recipient } from '../Recipient'
 import { Symmetric } from '../Symmetric'
-import { type ExportedPackageHeader } from '../types'
 
 function calculateEncryptedChunkSize (chunkSize: number): number {
   return AES_IV_LENGTH_IN_BYTES + chunkSize + AES_TAG_LENGTH_IN_BYTES
 }
 
-async function parseHeader (
-  recipientKeyPair: CryptoKeyPair,
-  header: Uint8Array
-): Promise<{
-    hamcKey: CryptoKey
-    symmetric: Symmetric
-  }> {
-  const exportedHeader = bufferToObject<ExportedPackageHeader>(header)
+class DecryptionStream extends ReadableStream<Uint8Array> {}
+
+interface Metadata {
+  size: number
+  hamcKey: CryptoKey
+  symmetric: Symmetric
+}
+
+interface Header {
+  size: number
+  contentPublicKey: JsonWebKey
+  recipients: Record<string, string>
+}
+
+async function parseMetadata (
+  header: ArrayBuffer,
+  recipient: Recipient,
+): Promise<Metadata> {
+  const exportedHeader = bufferToObject<Header>(header)
   const contentPublicKey = await Asymmetric.importPublicKey('ECDH', exportedHeader.contentPublicKey)
-  const keyThumbprint = await Asymmetric.calculateKeyThumbprint(recipientKeyPair.publicKey)
+  const keyThumbprint = await Asymmetric.calculateKeyThumbprint(recipient.ECDH.publicKey)
   const exportedKey = exportedHeader.recipients[keyThumbprint]
 
-  if (typeof exportedKey !== 'string') {
-    throw new Error('Invalid recipient.')
+  if (typeof exportedKey !== 'string' || recipient.ECDH.privateKey == null) {
+    throw new InvalidRecipientException()
   }
 
   const wrappingKey = await Asymmetric.deriveWrappingKey(
     contentPublicKey,
-    recipientKeyPair.privateKey
+    recipient.ECDH.privateKey,
   )
 
   const contentEncryptionKey = await Symmetric.unwrapEncryptionKey(
     exportedKey,
-    wrappingKey
+    wrappingKey,
   )
 
   const hamcKey = await generateHmacKeyFromBuffer(header)
   const symmetric = new Symmetric(contentEncryptionKey)
 
   return {
+    size: exportedHeader.size,
     hamcKey,
-    symmetric
+    symmetric,
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
-export class DecryptionStream {
-  static create (
-    recipientKeyPair: CryptoKeyPair
-  ): TransformStream<Uint8Array, Uint8Array> {
-    let counter = 0
+export function createDecryptionStream (
+  source: BlobLike,
+  recipient: Recipient,
+): DecryptionStream {
+  let metadata: Metadata
+  let decryptedBytes = 0
 
-    let bufferedBytes = 0
-    let buffered: Uint8Array[] = []
+  return new ReadableStream<[BlobLike, number]>({
+    async start (controller) {
+      try {
+        const headerSize = bufferToUint32(
+          await source.slice(0, Uint32Array.BYTES_PER_ELEMENT).arrayBuffer(),
+        )
 
-    let headerSize: number
-    let initial: {
-      hamcKey: CryptoKey
-      symmetric: Symmetric
-    }
+        metadata = await parseMetadata(
+          await source.slice(Uint32Array.BYTES_PER_ELEMENT, headerSize).arrayBuffer(),
+          recipient,
+        )
 
-    return new TransformStream(withEquallySized({
-      chunkSize: calculateEncryptedChunkSize(DEFAULT_CHUNK_SIZE),
-      resizeChunk: async (chunk) => {
-        // If the header have been parsed, return the buffered along with the chunk
-        if (initial != null) {
-          return bufferedBytes > 0
-            ? concatChunks(buffered.concat(chunk))
-            : chunk
+        const restSource = source.slice(Uint32Array.BYTES_PER_ELEMENT + headerSize, source.size)
+        const chunkSize = calculateEncryptedChunkSize(DEFAULT_CHUNK_SIZE)
+
+        for (let counter = 0; counter < Math.floor(restSource.size / chunkSize); counter++) {
+          const start = DEFAULT_CHUNK_SIZE * counter
+          const end = DEFAULT_CHUNK_SIZE * (counter + 1)
+          const data = restSource.slice(start, end > restSource.size ? restSource.size : end)
+          controller.enqueue([data, counter])
         }
-
-        bufferedBytes += chunk.byteLength
-        buffered.push(chunk)
-
-        /**
-         * headerSize byteLength is equal to Uint32Array.BYTES_PER_ELEMENT
-         * If the headerSize is not parsed, and the buffered byteLength is greater than headerSize byteLength,
-         * parse headerSize and slice the buffered.
-         */
-        if (headerSize == null && bufferedBytes >= Uint32Array.BYTES_PER_ELEMENT) {
-          const buffer = concatChunks(buffered)
-          headerSize = bufferToUint32(buffer.subarray(0, Uint32Array.BYTES_PER_ELEMENT))
-          bufferedBytes -= Uint32Array.BYTES_PER_ELEMENT
-          buffered = [buffer.subarray(Uint32Array.BYTES_PER_ELEMENT, buffer.byteLength)]
-        }
-
-        /**
-         * If headerSize is parsed and header is not parsed and buffered byteLength is greater than headerSize,
-         * parse header and return the sliced buffered.
-         */
-        if (headerSize != null && initial == null && bufferedBytes >= headerSize) {
-          const buffer = concatChunks(buffered)
-          initial = await parseHeader(
-            recipientKeyPair,
-            buffer.subarray(0, headerSize)
-          )
-
-          bufferedBytes -= headerSize
-          buffered = []
-
-          return buffer.subarray(headerSize, buffer.byteLength)
-        }
-
-        return new Uint8Array(0)
-      },
-      transform: async (chunk, controller) => {
+      } catch (error) {
+        controller.error(error)
+      }
+    },
+  })
+    .pipeThrough(new TransformStream<[BlobLike, number], Uint8Array>({
+      async transform ([data, counter], controller) {
         try {
-          const additionalData = await HMAC(initial.hamcKey, uint32ToBuffer(counter))
-          const plaintext = await initial.symmetric.decrypt(chunk, additionalData)
+          const [ciphertext, additionalData] = await Promise.all([
+            data.arrayBuffer(),
+            HMAC(metadata.hamcKey, uint32ToBuffer(counter)),
+          ])
+
+          const plaintext = await metadata.symmetric.decrypt(ciphertext, additionalData)
 
           controller.enqueue(plaintext)
-          counter += 1
+          decryptedBytes += plaintext.byteLength
         } catch (error) {
           controller.error(error)
         }
       },
-      flush: async (controller) => {
-        if (initial == null) {
-          controller.error('Invalid Source.')
+      async flush (controller) {
+        if (decryptedBytes !== metadata.size) {
+          controller.error('The actual size of source does not match the expected size.')
         }
-      }
+      },
     }))
-  }
 }

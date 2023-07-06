@@ -25,25 +25,25 @@ export function base64UrlToBuffer (text: string): Uint8Array {
 
 export function objectToBuffer<T = unknown> (object: T): Uint8Array {
   return textToBuffer(
-    JSON.stringify(object)
+    JSON.stringify(object),
   )
 }
 
 export function bufferToObject<T = unknown> (buffer: ArrayBuffer): T {
   return JSON.parse(
-    bufferToText(buffer)
+    bufferToText(buffer),
   )
 }
 
 export function objectToBase64Url<T = unknown> (object: T): string {
   return bufferToBase64Url(
-    objectToBuffer(object)
+    objectToBuffer(object),
   )
 }
 
 export function base64UrlToObject<T = unknown> (base64: string): T {
   return bufferToObject(
-    base64UrlToBuffer(base64)
+    base64UrlToBuffer(base64),
   )
 }
 

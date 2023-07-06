@@ -1,28 +1,27 @@
+import { randomUUID } from 'crypto'
 import { Encryption } from './Encryption'
-import { Keychain } from './Keychain'
+import { Recipient } from './Recipient'
 
 describe('Encryptor', () => {
-  let bobKeychain: Keychain
+  let recipient: Recipient
 
-  const plaintext = 'plaintext'
+  const plaintext = randomUUID()
+
   const plaintextBuffer = new TextEncoder().encode(plaintext).buffer
-  const createSources = (): BodyInit[] => {
+  const createSources = (): Array<{
+    type: string
+    source: string | Blob | ArrayBuffer
+  }> => {
     return [
-      plaintext,
-      plaintextBuffer,
-      new Uint8Array(plaintextBuffer),
-      new Blob([plaintextBuffer]),
-      new ReadableStream({
-        start: (controller) => {
-          controller.enqueue(plaintextBuffer)
-          controller.close()
-        }
-      })
+      { type: 'String', source: plaintext },
+      { type: 'ArrayBuffer', source: plaintextBuffer },
+      { type: 'Uint8Array', source: new Uint8Array(plaintextBuffer) },
+      { type: 'Blob', source: new Blob([plaintextBuffer]) },
     ]
   }
 
   beforeAll(async () => {
-    bobKeychain = await Keychain.generate()
+    recipient = await Recipient.generate()
   })
 
   it('should be defined', () => {
@@ -39,40 +38,37 @@ describe('Encryptor', () => {
 
   it('should can addRecipient', () => {
     const encryptor = new Encryption(plaintext)
-    expect(() => encryptor.addRecipient(bobKeychain)).not.toThrow()
+    expect(() => encryptor.addRecipient(recipient)).not.toThrow()
   })
 
   describe('stream', () => {
-    createSources().forEach((source) => {
-      it(`should return a ReadableStream when source is ${source.constructor.name}`, () => {
-        const stream = new Encryption(source)
-          .addRecipient(bobKeychain)
+    test.each(createSources())('should work with $type', async ({ source }) => {
+      await expect(
+        new Encryption(source)
+          .addRecipient(recipient)
           .stream()
-        expect(stream).toBeInstanceOf(ReadableStream)
-      })
+          .pipeTo(new WritableStream()),
+      ).resolves.toBeInstanceOf(ReadableStream)
     })
   })
 
   describe('arrayBuffer', () => {
-    createSources().forEach((source) => {
-      it(`should return a arrayBuffer when source is ${source.constructor.name}`, async () => {
-        const arrayBuffer = await new Encryption(source)
-          .addRecipient(bobKeychain)
-          .arrayBuffer()
-
-        expect(arrayBuffer).toBeInstanceOf(ArrayBuffer)
-      })
+    test.each(createSources())('should work with $type', async ({ source }) => {
+      await expect(
+        new Encryption(source)
+          .addRecipient(recipient)
+          .arrayBuffer(),
+      ).resolves.toBeInstanceOf(ArrayBuffer)
     })
   })
 
   describe('text', () => {
-    createSources().forEach((source) => {
-      it(`should return a text when source is ${source.constructor.name}`, async () => {
-        const text = await new Encryption(source)
-          .addRecipient(bobKeychain)
-          .text()
-        expect(typeof text === 'string').toBeTruthy()
-      })
+    test.each(createSources())('should work with $type', async ({ source }) => {
+      await expect(
+        new Encryption(source)
+          .addRecipient(recipient)
+          .text(),
+      ).resolves.toBeDefined()
     })
   })
 })

@@ -8,7 +8,7 @@ import {
   HMAC,
   deriveUnlockKeyFromSecret,
   generateUnlockKey,
-  deriveUnlockKeyFromPassword
+  deriveUnlockKeyFromPassword,
 } from './cipher'
 
 describe('cipher', () => {
@@ -17,10 +17,10 @@ describe('cipher', () => {
       const { publicKey } = await crypto.subtle.generateKey(
         {
           name: 'ECDSA',
-          namedCurve: 'P-256'
+          namedCurve: 'P-256',
         },
         true,
-        ['sign', 'verify']
+        ['sign', 'verify'],
       )
 
       await expect(exportKey(publicKey)).resolves.toBeDefined()
@@ -32,10 +32,10 @@ describe('cipher', () => {
       const { publicKey, privateKey } = await crypto.subtle.generateKey(
         {
           name: 'ECDSA',
-          namedCurve: 'P-256'
+          namedCurve: 'P-256',
         },
         true,
-        ['sign', 'verify']
+        ['sign', 'verify'],
       )
 
       await expect(exportKey(publicKey)).resolves.toBeDefined()
@@ -68,7 +68,7 @@ describe('cipher', () => {
       const key = await crypto.subtle.generateKey(
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign', 'verify']
+        ['sign', 'verify'],
       )
 
       await expect(HMAC(key, new Uint8Array(10))).resolves.toBeDefined()
@@ -81,7 +81,7 @@ describe('cipher', () => {
     it('should work', async () => {
       expect(getRandomValues(10)).toBeInstanceOf(Uint8Array)
       expect(
-        getRandomValues(10).every((value) => value === 0)
+        getRandomValues(10).every((value) => value === 0),
       ).toBeFalsy()
     })
   })
@@ -106,8 +106,8 @@ describe('cipher', () => {
         await expect(
           deriveUnlockKeyFromPassword({
             password,
-            salt
-          })
+            salt,
+          }),
         ).resolves.toBeDefined()
       })
     })
