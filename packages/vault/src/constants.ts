@@ -10,3 +10,6 @@ export const AES_IV_LENGTH_IN_BYTES = AES_IV_LENGTH_IN_BITS / 8
 
 // 16MB
 export const DEFAULT_CHUNK_SIZE = 16 * 1024 * 1024
+
+// 4 Bytes
+export const HEADER_SIZE_LENGTH = Uint32Array.BYTES_PER_ELEMENT

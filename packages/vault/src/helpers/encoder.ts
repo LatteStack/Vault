@@ -1,4 +1,5 @@
 import * as Base64 from 'js-base64'
+import { HEADER_SIZE_LENGTH } from '../constants'
 
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
@@ -48,7 +49,7 @@ export function base64UrlToObject<T = unknown> (base64: string): T {
 }
 
 export function uint32ToBuffer (int32: number): Uint8Array {
-  const uint8Array = new Uint8Array(Uint32Array.BYTES_PER_ELEMENT)
+  const uint8Array = new Uint8Array(HEADER_SIZE_LENGTH)
   new DataView(uint8Array.buffer).setUint32(0, int32)
   return uint8Array
 }

@@ -1,5 +1,5 @@
 import { Asymmetric } from '../Asymmetric'
-import { AES_TAG_LENGTH_IN_BYTES, DEFAULT_CHUNK_SIZE, AES_IV_LENGTH_IN_BYTES } from '../constants'
+import { AES_TAG_LENGTH_IN_BYTES, DEFAULT_CHUNK_SIZE, AES_IV_LENGTH_IN_BYTES, HEADER_SIZE_LENGTH } from '../constants'
 import { InvalidRecipientException } from '../Exception'
 import { bufferToObject, bufferToUint32, generateHmacKeyFromBuffer, HMAC, uint32ToBuffer } from '../helpers'
 import { type BlobLike } from '../platform'
@@ -68,23 +68,26 @@ export function createDecryptionStream (
     async start (controller) {
       try {
         const headerSize = bufferToUint32(
-          await source.slice(0, Uint32Array.BYTES_PER_ELEMENT).arrayBuffer(),
+          await source.slice(0, HEADER_SIZE_LENGTH).arrayBuffer(),
         )
 
         metadata = await parseMetadata(
-          await source.slice(Uint32Array.BYTES_PER_ELEMENT, headerSize).arrayBuffer(),
+          await source.slice(HEADER_SIZE_LENGTH, HEADER_SIZE_LENGTH + headerSize).arrayBuffer(),
           recipient,
         )
 
-        const restSource = source.slice(Uint32Array.BYTES_PER_ELEMENT + headerSize, source.size)
+        const restSource = source.slice(HEADER_SIZE_LENGTH + headerSize, source.size)
         const chunkSize = calculateEncryptedChunkSize(DEFAULT_CHUNK_SIZE)
 
-        for (let counter = 0; counter < Math.floor(restSource.size / chunkSize); counter++) {
-          const start = DEFAULT_CHUNK_SIZE * counter
-          const end = DEFAULT_CHUNK_SIZE * (counter + 1)
+        for (let counter = 0; counter < Math.ceil(restSource.size / chunkSize); counter++) {
+          const start = chunkSize * counter
+          const end = start + chunkSize
           const data = restSource.slice(start, end > restSource.size ? restSource.size : end)
+
           controller.enqueue([data, counter])
         }
+
+        controller.close()
       } catch (error) {
         controller.error(error)
       }
@@ -108,7 +111,7 @@ export function createDecryptionStream (
       },
       async flush (controller) {
         if (decryptedBytes !== metadata.size) {
-          controller.error('The actual size of source does not match the expected size.')
+          controller.error('The decrypted bytes does not match the expected size.')
         }
       },
     }))

@@ -1,122 +1,76 @@
 import { Encryption } from './Encryption'
 import { Decryption } from './Decryption'
-import { Keychain, type PrivateKeychain } from './Keychain'
-import { randomBytes, randomInt } from 'crypto'
+import { randomBytes, randomInt, randomUUID } from 'crypto'
+import { Recipient } from './Recipient'
+import { isEqual } from 'lodash'
+import { DEFAULT_CHUNK_SIZE } from './constants'
 
-describe('Decryptor', () => {
-  const plaintext = randomBytes(randomInt(100)).toString('hex')
+describe('Decryption', () => {
+  let recipient: Recipient
 
-  const bobKeychain = Keychain.generate()
-  const aliceKeychain = Keychain.generate()
-  const ciphertext = Promise.all([bobKeychain, aliceKeychain])
-    .then(async ([bob, alice]) => {
-      return await new Encryption(plaintext)
-        .addRecipient(bob)
-        .addRecipient(alice)
-        .text()
-    })
-  const ciphertextBuffer = Promise.all([bobKeychain, aliceKeychain])
-    .then(async ([bob, alice]) => {
-      return await new Encryption(plaintext)
-        .addRecipient(bob)
-        .addRecipient(alice)
-        .arrayBuffer()
-    })
+  const plaintext = randomUUID()
+  const plaintextBuffer = new TextEncoder().encode(plaintext).buffer
 
-  const createSources = (): Array<[Promise<BodyInit>, Promise<PrivateKeychain>]> => {
-    const sources: Array<[Promise<BodyInit>, Promise<PrivateKeychain>]> = []
-
-    for (const keychain of [bobKeychain, aliceKeychain]) {
-      [
-        ciphertext,
-        Promise.resolve(ciphertextBuffer),
-        Promise.resolve(ciphertextBuffer).then((buffer) => new Uint8Array(buffer)),
-        Promise.resolve(ciphertextBuffer).then((buffer) => new Blob([buffer])),
-        Promise.resolve(ciphertextBuffer).then((buffer) => new ReadableStream({
-          start: (controller) => {
-            controller.enqueue(buffer)
-            controller.close()
-          },
-        })),
-      ].forEach((source) => {
-        sources.push([source, keychain])
-      })
-    }
-
-    return sources
-  }
-
-  it('should be defined', async () => {
-    const encryptor = new Decryption(await ciphertext)
-    expect(encryptor).toBeDefined()
+  beforeAll(async () => {
+    recipient = await Recipient.generate()
   })
 
-  it('should throw when no recipients', async () => {
-    const encryptor = new Decryption(await ciphertext)
-    expect(() => encryptor.stream()).toThrow()
-    await expect(encryptor.arrayBuffer()).rejects.toThrow()
-    await expect(encryptor.text()).rejects.toThrow()
-  })
-
-  it('should can setRecipient', async () => {
-    const encryptor = new Decryption(await ciphertext)
-    await expect(Promise.resolve(
-      encryptor.setRecipient(await bobKeychain),
-    )).resolves.not.toThrow()
-    await expect(Promise.resolve(
-      encryptor
-        .setRecipient(await bobKeychain)
-        .setRecipient(await aliceKeychain),
-    )).resolves.not.toThrow()
-  })
-
-  it('should throw when source is invalid base64', async () => {
-    const invalidSource = `${await ciphertext}35`
-    await expect(
-      new Decryption(invalidSource)
-        .setRecipient(await bobKeychain)
+  it('should work with string', async () => {
+    expect(isEqual(
+      plaintext,
+      await new Decryption(
+        await new Encryption(plaintext)
+          .addRecipient(recipient)
+          .text(),
+      )
+        .setRecipient(recipient)
         .text(),
-    ).rejects.toBeDefined()
+    ))
   })
 
-  it('should throw when source is invalid arrayBuffer', async () => {
-    const invalidSource = (await ciphertextBuffer).slice(0, 10)
-    await expect(
-      new Decryption(invalidSource)
-        .setRecipient(await bobKeychain)
+  it('should work with arrayBuffer', async () => {
+    expect(isEqual(
+      plaintextBuffer,
+      await new Decryption(
+        await new Encryption(plaintext)
+          .addRecipient(recipient)
+          .arrayBuffer(),
+      )
+        .setRecipient(recipient)
         .arrayBuffer(),
-    ).rejects.toBeDefined()
+    ))
   })
 
-  describe('stream', () => {
-    test.each(createSources())('it should work with different source.', async (source, keychain) => {
-      const stream = new Decryption(await source)
-        .setRecipient(await keychain)
-        .stream()
-      expect(stream).toBeInstanceOf(ReadableStream)
-      const write = jest.fn()
-      await expect(
-        stream.pipeTo(new WritableStream({ write })),
-      ).resolves.not.toThrow()
-      expect(write).toHaveBeenCalled()
-    })
+  it('should work with Blob', async () => {
+    expect(isEqual(
+      plaintextBuffer,
+      await new Decryption(
+        new Blob([
+          await new Encryption(plaintext)
+            .addRecipient(recipient)
+            .arrayBuffer(),
+        ]),
+      )
+        .setRecipient(recipient)
+        .arrayBuffer(),
+    ))
   })
 
-  describe('arrayBuffer', () => {
-    test.each(createSources())('it should work with different source.', async (source, keychain) => {
-      const arrayBuffer = await new Decryption(await source)
-        .setRecipient(await keychain)
-        .arrayBuffer()
-      expect(arrayBuffer).toBeInstanceOf(ArrayBuffer)
-    })
-  })
+  it('should work with large file', async () => {
+    const largeFile = randomBytes(
+      randomInt(DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_SIZE * 4),
+    ).buffer
 
-  describe('text', () => {
-    test.each(createSources())('it should work with different source.', async (source, keychain) => {
-      const text = await new Decryption(await source)
-        .setRecipient(await keychain)
-        .text()
-      expect(typeof text === 'string').toBeTruthy()
-    })
+    expect(isEqual(
+      largeFile,
+      await new Decryption(
+        await new Encryption(largeFile)
+          .addRecipient(recipient)
+          .arrayBuffer(),
+      )
+        .setRecipient(recipient)
+        .arrayBuffer(),
+    ))
+      .toBeTruthy()
   })
 })

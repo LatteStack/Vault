@@ -73,12 +73,14 @@ export function createEncryptionStream (
 
   return new ReadableStream<[BlobLike, number]>({
     start (controller) {
-      for (let counter = 0; counter < Math.floor(source.size / DEFAULT_CHUNK_SIZE); counter++) {
+      for (let counter = 0; counter < Math.ceil(source.size / DEFAULT_CHUNK_SIZE); counter++) {
         const start = DEFAULT_CHUNK_SIZE * counter
         const end = DEFAULT_CHUNK_SIZE * (counter + 1)
         const data = source.slice(start, end > source.size ? source.size : end)
         controller.enqueue([data, counter])
       }
+
+      controller.close()
     },
   })
     .pipeThrough(new TransformStream<[BlobLike, number], Uint8Array>({
@@ -109,7 +111,7 @@ export function createEncryptionStream (
       },
       async flush (controller) {
         if (encryptedBytes !== source.size) {
-          controller.error('The actual size of source does not match the expected size.')
+          controller.error('The encrypted bytes does not match the source size.')
         }
       },
     }))

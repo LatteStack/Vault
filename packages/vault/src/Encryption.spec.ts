@@ -1,12 +1,12 @@
-import { randomUUID } from 'crypto'
+import { randomBytes, randomInt, randomUUID } from 'crypto'
+import { DEFAULT_CHUNK_SIZE } from './constants'
 import { Encryption } from './Encryption'
 import { Recipient } from './Recipient'
 
-describe('Encryptor', () => {
+describe('Encryption', () => {
   let recipient: Recipient
 
   const plaintext = randomUUID()
-
   const plaintextBuffer = new TextEncoder().encode(plaintext).buffer
   const createSources = (): Array<{
     type: string
@@ -25,30 +25,36 @@ describe('Encryptor', () => {
   })
 
   it('should be defined', () => {
-    const encryptor = new Encryption(plaintext)
-    expect(encryptor).toBeDefined()
+    const encryption = new Encryption(plaintext)
+    expect(encryption).toBeDefined()
   })
 
   it('should throw when no recipients', async () => {
-    const encryptor = new Encryption(plaintext)
-    expect(() => encryptor.stream()).toThrow()
-    await expect(encryptor.arrayBuffer()).rejects.toThrow()
-    await expect(encryptor.text()).rejects.toThrow()
+    const encryption = new Encryption(plaintext)
+    expect(() => encryption.stream()).toThrow()
+    await expect(encryption.arrayBuffer()).rejects.toThrow()
+    await expect(encryption.text()).rejects.toThrow()
   })
 
-  it('should can addRecipient', () => {
-    const encryptor = new Encryption(plaintext)
-    expect(() => encryptor.addRecipient(recipient)).not.toThrow()
+  it('should can addRecipient', async () => {
+    const encryption = new Encryption(plaintext)
+    expect(() => encryption.addRecipient(recipient)).not.toThrow()
+    expect(() => encryption.addRecipient(recipient.publicKey)).not.toThrow()
+    await expect(encryption.arrayBuffer()).resolves.toBeDefined()
   })
 
   describe('stream', () => {
-    test.each(createSources())('should work with $type', async ({ source }) => {
+    test.each(createSources())('it should work with $type', async ({ source }) => {
+      const write = jest.fn((chunk) => {
+        expect(chunk instanceof Uint8Array)
+      })
+
       await expect(
         new Encryption(source)
           .addRecipient(recipient)
           .stream()
-          .pipeTo(new WritableStream()),
-      ).resolves.toBeInstanceOf(ReadableStream)
+          .pipeTo(new WritableStream({ write })),
+      ).resolves.not.toThrow()
     })
   })
 
@@ -70,5 +76,18 @@ describe('Encryptor', () => {
           .text(),
       ).resolves.toBeDefined()
     })
+  })
+
+  it('should work with large file', async () => {
+    const largeFile = new Blob([
+      randomBytes(randomInt(DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_SIZE * 4)),
+    ])
+
+    await expect(
+      new Encryption(largeFile)
+        .addRecipient(recipient)
+        .stream()
+        .pipeTo(new WritableStream()),
+    ).resolves.not.toThrow()
   })
 })

@@ -13,17 +13,13 @@ export class Decryption {
   constructor (ciphertext: string | ArrayBuffer | BlobLike) {
     if (isBlobLike(ciphertext)) {
       this.source = ciphertext
-    }
-
-    if (isBuffer(ciphertext)) {
+    } else if (isBuffer(ciphertext)) {
       this.source = new Blob([ciphertext])
-    }
-
-    if (typeof ciphertext === 'string') {
+    } else if (typeof ciphertext === 'string') {
       this.source = new Blob([base64UrlToBuffer(ciphertext)])
+    } else {
+      throw new InvalidCipherextException()
     }
-
-    throw new InvalidCipherextException()
   }
 
   setRecipient (recipient: Recipient): this {
