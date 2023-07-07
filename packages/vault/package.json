@@ -2,6 +2,21 @@
   "name": "@lattestack/vault",
   "version": "0.0.1",
   "type": "commonjs",
+  "license": "Dual",
+  "description": "Vault is a wrapper around the Web Cryptography API available in modern browsers and NodeJS, it provides secure and easy-to-use cryptographic APIs for encrypting and decrypting data using AES-256-GCM and Elliptic-curve cryptography.",
+  "keywords": [
+    "crypto",
+    "encryption"
+  ],
+  "author": {
+    "name": "ethan@LatteStack",
+    "email": "ethan@lattestack.com",
+    "url": "https://lattestack.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LatteStack/Vault.git"
+  },
   "dependencies": {
     "js-base64": "^3.7.5",
     "zod": "^3.21.4"
