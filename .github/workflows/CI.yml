@@ -1,0 +1,44 @@
+name: Node.js 18 Build and Publish
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Set up PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: 6.0.2
+          run_install: |
+            - recursive: true
+              args: [--frozen-lockfile, --strict-peer-dependencies]
+
+      - name: Lint package
+        run: pnpm nx lint vault
+
+      - name: Test package
+        run: pnpm nx test vault
+
+      - name: Build package
+        run: pnpm nx build vault
+
+      - name: Copy README
+        run: cp README.md dist/packages/vault/README.md
+
+      - name: Publish to npm
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public dist/packages/vault
