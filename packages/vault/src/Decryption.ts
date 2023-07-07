@@ -1,4 +1,3 @@
-import './compatible'
 import { InvalidCipherextException, InvalidRecipientException } from './Exception'
 import { base64UrlToBuffer, bufferToText, readAllChunks } from './helpers'
 import { type BlobLike, isBuffer, isBlobLike } from './platform'

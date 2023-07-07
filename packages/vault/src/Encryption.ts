@@ -1,4 +1,3 @@
-import './compatible'
 import { InvalidPlaintextException } from './Exception'
 import {
   bufferToBase64Url,
