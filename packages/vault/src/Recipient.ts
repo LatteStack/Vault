@@ -75,11 +75,11 @@ export class Recipient {
     return objectToBase64Url({
       ECDSA: {
         publicKey: await exportJwk(recipient.ECDSA.publicKey),
-        wrappedPrivateKey: await Symmetric.wrapKey(recipient.ECDSA.privateKey, unlockKey, 'jwk'),
+        privateKey: await Symmetric.wrapKey(recipient.ECDSA.privateKey, unlockKey, 'jwk'),
       },
       ECDH: {
         publicKey: await exportJwk(recipient.ECDH.publicKey),
-        wrappedPrivateKey: await Symmetric.wrapKey(recipient.ECDH.privateKey, unlockKey, 'jwk'),
+        privateKey: await Symmetric.wrapKey(recipient.ECDH.privateKey, unlockKey, 'jwk'),
       },
     })
   }
