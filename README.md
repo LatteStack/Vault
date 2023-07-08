@@ -6,6 +6,15 @@ Vault is a wrapper around the Web Cryptography API available in modern browsers 
 npm install --save @lattestack/vault
 ```
 
+For Node.js versions 19 and below, include the following statement in the program's entry point:
+
+```javascript
+globalThis.crypto ??= require('crypto').webcrypto
+globalThis.Blob ??= require('buffer').Blob
+globalThis.ReadableStream ??= require('stream/web').ReadableStream
+globalThis.TransformStream ??= require('stream/web').TransformStream
+```
+
 ## Quick Start
 
 ```javascript
